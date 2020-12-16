@@ -1,0 +1,29 @@
+{
+    "name": "enocean_PTM215b",
+    "description": "Receive switch events via BLE to esp32",
+    "keywords": "enocean PTM215b ble esp32",
+    "authors":
+    [
+        {
+            "name": "Jeroen van de Vorst",
+            "maintainer": true
+        },
+        {
+            "name": "Bas Schouten"
+        }
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/I-Connect/enocean_PTM215b.git"
+    },
+    "frameworks": "Arduino",
+    "platforms": [
+        "espressif32"
+    ],
+    "build": {
+        "flags": "-Wno-unused-function"
+    },
+    "dependencies": [
+     
+  ]
+}
