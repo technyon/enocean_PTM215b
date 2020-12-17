@@ -47,3 +47,4 @@ struct commissioning{
     char staticSourceAddress[6] = {0};
 };
 
+
