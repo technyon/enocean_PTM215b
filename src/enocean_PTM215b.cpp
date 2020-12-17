@@ -38,8 +38,8 @@ void enocean_PTM215bBleTask(void * pvParameters) {
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   
 	while (1){
-    pBLEScan->start(3); //Scan for 3 seconds
-    delay(100);
+    pBLEScan->start(1); //Scan for 3 seconds
+    delay(1);
   }
 }
 
@@ -81,14 +81,67 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
     }
     // check that GAP AD Type is 0xFF, check that Manufacturer ID is 0x03DA
     if(payloadBuffer.type[0] == 0xff && payloadBuffer.manufacturerId[0] == 0xDA && payloadBuffer.manufacturerId[1] == 0x03){
-      printBuffer((byte*)scannedBleAddress, 6, false, "BLE address:");
-      printBuffer((byte*)payloadBuffer.len, 1, false, "PayloadLen:");
-      printBuffer((byte*)payloadBuffer.type, 1, false, "PayloadType:");
-      printBuffer((byte*)payloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId:");
-      printBuffer((byte*)payloadBuffer.sequenceCounter, 4, false, "PayloadseqCounter:");
-      printBuffer((byte*)payloadBuffer.switchStatus, 1, false, "PayloadSwitchStatus:");
-      printBuffer((byte*)payloadBuffer.optionalData, 4, false, "PayloadOptionalData:");
+      // printBuffer((byte*)scannedBleAddress, 6, false, "BLE address");
+      // printBuffer((byte*)payloadBuffer.len, 1, false, "PayloadLen");
+      // printBuffer((byte*)payloadBuffer.type, 1, false, "PayloadType");
+      // printBuffer((byte*)payloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
+      // printBuffer((byte*)payloadBuffer.sequenceCounter, 4, false, "PayloadseqCounter");
+      // log_d("PayloadSwitchStatus: %d", payloadBuffer.switchStatus);
+      // printBuffer((byte*)payloadBuffer.optionalData, 4, false, "PayloadOptionalData");
+
+      handleButtonAction(payloadBuffer.switchStatus);
     }
+  }
+}
+
+void Enocean_PTM215b::handleButtonAction(uint8_t switchStatus){
+  log_d("handling button action: %d", switchStatus);
+  switch (switchStatus)
+  {
+  case BT_ENOCEAN_SWITCH_OA_PUSH:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_OA_RELEASE:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_IA_PUSH:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_IA_RELEASE:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_OB_PUSH:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_OB_RELEASE:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_IB_PUSH:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_IB_RELEASE:
+    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_PUSH:
+    log_d("BT_ENOCEAN_SWITCH_PUSH");
+    /* code */
+    break;
+  case BT_ENOCEAN_SWITCH_RELEASE:
+    log_d("BT_ENOCEAN_SWITCH_RELEASE");
+    /* code */
+    break;
+  
+  default:
+    log_e("Unknown button action");
+    break;
   }
 }
 

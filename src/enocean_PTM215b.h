@@ -29,6 +29,28 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     void pushNotificationToQueue();
     void onResult(BLEAdvertisedDevice advertisedDevice) override;
 
+    void handleButtonAction(uint8_t switchStatus);
+
     char securityKey[16] = {0};
     esp_bd_addr_t scannedBleAddress;
+
+    /** Contents of a payload telegram */
+    struct payload{
+        char len[1] 			      = {0};
+        char type[1] 			      = {0};
+        char manufacturerId[2] 	= {0};
+        char sequenceCounter[4] = {0};
+        uint8_t switchStatus    = 0;
+        char optionalData[4] 	  = {0};
+    };
+
+    /** Contents of a commissioning telegram */
+    struct commissioning{
+        char len[1] 				        = {0};
+        char type[1] 				        = {0};
+        char manufacturerId[2] 		  = {0};
+        char sequenceCounter[4] 	  = {0};
+        char securityKey[16] 		    = {0};
+        char staticSourceAddress[6] = {0};
+    };
 };
