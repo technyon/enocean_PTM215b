@@ -13,7 +13,7 @@
 
 // #define BLE_DEBUG
 
-class Enocean_PTM215b{
+class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
   public:
     Enocean_PTM215b();
     virtual ~Enocean_PTM215b();
@@ -27,18 +27,8 @@ class Enocean_PTM215b{
     BaseType_t xHigherPriorityTaskWoken;
     void startEnocean_PTM215bBleXtask();
     void pushNotificationToQueue();
-    void onScanResult(BLEAdvertisedDevice advertisedDevice);
-};
+    void onResult(BLEAdvertisedDevice advertisedDevice) override;
 
-class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks 
-{
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
-      String Scaned_BLE_Address;
-      static BLEAddress *Server_BLE_Address;
-      
-      Serial.printf("Scan Result: %s \n", advertisedDevice.toString().c_str());
-      Server_BLE_Address = new BLEAddress(advertisedDevice.getAddress());
-      
-      Scaned_BLE_Address = Server_BLE_Address->toString().c_str(); 
-    }
+    char securityKey[16] = {0};
+    esp_bd_addr_t scannedBleAddress;
 };
