@@ -39,7 +39,16 @@ void enocean_PTM215bBleTask(void * pvParameters) {
   
 	while (1){
     pBLEScan->start(1); //Scan for 3 seconds
-    delay(1);
+    delay(10);
+    
+    //check for long button press
+    for (auto bleSwitch : enocean_PTM215bObj->bleSwitches){
+      if(bleSwitch.second.rockerA0Pushed && ( (millis() - LONG_PRESS_INTERVAL_MS) > bleSwitch.second.rockerA0PushedStartTime) ){
+        bleSwitch.second.rockerAPushedType = PUSHED_LONG;
+        //TODO: notify observers
+      }
+    }
+    
   }
 }
 
@@ -88,60 +97,119 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
       // printBuffer((byte*)payloadBuffer.sequenceCounter, 4, false, "PayloadseqCounter");
       // log_d("PayloadSwitchStatus: %d", payloadBuffer.switchStatus);
       // printBuffer((byte*)payloadBuffer.optionalData, 4, false, "PayloadOptionalData");
-
-      handleButtonAction(payloadBuffer.switchStatus);
+      
+      //TODO: needs to move to routine that handles registering/storing ble switches 
+      registerBleSwitch(serverBleAddressObj->toString());
+      handleButtonAction(payloadBuffer.switchStatus, serverBleAddressObj->toString());
     }
   }
 }
 
-void Enocean_PTM215b::handleButtonAction(uint8_t switchStatus){
-  log_d("handling button action: %d", switchStatus);
+uint8_t Enocean_PTM215b::getNotificationStatus(std::string bleAddress, uint8_t rocker){
+  uint8_t result = PUSHED_UNDEFINED;
+  if(bleSwitches[bleAddress].rockerANotificationPending && rocker == BT_ENOCEAN_SWITCH_A ){
+    bleSwitches[bleAddress].rockerANotificationPending = false;
+    result = bleSwitches[bleAddress].rockerAPushedType;
+    bleSwitch.second.rockerBPushedType = PUSHED_UNDEFINED;
+    return result;
+  }
+  }else if(bleSwitches[bleAddress].rockerBNotificationPending && rocker == BT_ENOCEAN_SWITCH_B ){
+    bleSwitches[bleAddress].rockerBNotificationPending = false;
+    result bleSwitches[bleAddress].rockerBPushedType;
+    bleSwitch.second.rockerBPushedType = PUSHED_UNDEFINED;
+    return result;
+  }
+  return result;
+}
+
+void Enocean_PTM215b::registerBleSwitch(std::string bleAddress){
+  bleSwitch buffer;
+  bleSwitches.insert( std::pair<std::string,bleSwitch>(bleAddress,buffer) );
+}
+
+void Enocean_PTM215b::handleButtonAction(uint8_t switchStatus, std::string bleAddress){
+  log_d("handling button action: %d from %s", switchStatus, bleAddress.c_str());
+
   switch (switchStatus)
   {
-  case BT_ENOCEAN_SWITCH_OA_PUSH:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_OA_RELEASE:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_IA_PUSH:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_IA_RELEASE:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_OB_PUSH:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_OB_RELEASE:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_IB_PUSH:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_IB_RELEASE:
-    log_d("BT_ENOCEAN_SWITCH_OA_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_PUSH:
-    log_d("BT_ENOCEAN_SWITCH_PUSH");
-    /* code */
-    break;
-  case BT_ENOCEAN_SWITCH_RELEASE:
-    log_d("BT_ENOCEAN_SWITCH_RELEASE");
-    /* code */
-    break;
-  
-  default:
-    log_e("Unknown button action");
-    break;
+    case BT_ENOCEAN_SWITCH_A0_PUSH:{
+      log_d("BT_ENOCEAN_SWITCH_A0_PUSH");
+      bleSwitches[bleAddress].rockerA0Pushed = true;
+      bleSwitches[bleAddress].rockerA0PushedStartTime = millis();
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_A0_RELEASE:{
+      log_d("BT_ENOCEAN_SWITCH_A0_RELEASE");
+      if(millis() - LONG_PRESS_INTERVAL_MS < bleSwitches[bleAddress].rockerA0PushedStartTime  ){
+        bleSwitches[bleAddress].rockerAPushedType = PUSHED_SHORT;
+        bleSwitches[bleAddress].rockerANotificationPending = true;
+        bleSwitches[bleAddress].rockerA0Pushed = false;
+        //TODO: notifyobserver
+      }
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_A1_PUSH:{
+      log_d("BT_ENOCEAN_SWITCH_A1_PUSH");
+      bleSwitches[bleAddress].rockerA1Pushed = true;
+      bleSwitches[bleAddress].rockerA1PushedStartTime = millis();
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_A1_RELEASE:{
+      log_d("BT_ENOCEAN_SWITCH_A1_RELEASE");
+      if(millis() - LONG_PRESS_INTERVAL_MS < bleSwitches[bleAddress].rockerA1PushedStartTime  ){
+        bleSwitches[bleAddress].rockerAPushedType = PUSHED_SHORT;
+        bleSwitches[bleAddress].rockerANotificationPending = true;
+        bleSwitches[bleAddress].rockerA1Pushed = false;
+        //TODO: notifyobserver
+      }
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_B0_PUSH:{
+      log_d("BT_ENOCEAN_SWITCH_B0_PUSH");
+      bleSwitches[bleAddress].rockerB0Pushed = true;
+      bleSwitches[bleAddress].rockerB0PushedStartTime = millis();
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_B0_RELEASE:{
+      log_d("BT_ENOCEAN_SWITCH_B0_RELEASE");
+      if(millis() - LONG_PRESS_INTERVAL_MS < bleSwitches[bleAddress].rockerB0PushedStartTime  ){
+        bleSwitches[bleAddress].rockerBPushedType = PUSHED_SHORT;
+        bleSwitches[bleAddress].rockerBNotificationPending = true;
+        bleSwitches[bleAddress].rockerB0Pushed = false;
+        //TODO: notifyobserver
+      }
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_B1_PUSH:{
+      log_d("BT_ENOCEAN_SWITCH_B1_PUSH");
+      bleSwitches[bleAddress].rockerB1Pushed = true;
+      bleSwitches[bleAddress].rockerB1PushedStartTime = millis();
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_B1_RELEASE:{
+      log_d("BT_ENOCEAN_SWITCH_B1_RELEASE");
+      if(millis() - LONG_PRESS_INTERVAL_MS < bleSwitches[bleAddress].rockerB1PushedStartTime  ){
+        bleSwitches[bleAddress].rockerBPushedType = PUSHED_SHORT;
+        bleSwitches[bleAddress].rockerBNotificationPending = true;
+        bleSwitches[bleAddress].rockerB1Pushed = false;
+        //TODO: notifyobserver
+      }
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_PUSH:{
+      log_d("BT_ENOCEAN_SWITCH_PUSH");
+      /* code */
+      break;
+    }
+    case BT_ENOCEAN_SWITCH_RELEASE:{
+      log_d("BT_ENOCEAN_SWITCH_RELEASE");
+      /* code */
+      break;
+    }
+    default:{
+      log_e("Unknown button action");
+      break;
+    }
   }
 }
 

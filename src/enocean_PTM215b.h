@@ -10,6 +10,7 @@
 #include "BLEAdvertisedDevice.h"
 #include "enocean_PTM215bConstants.h"
 #include "Arduino.h"
+#include <map>
 
 // #define BLE_DEBUG
 
@@ -22,6 +23,23 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
 
     virtual void initialize();
 
+    struct bleSwitch{
+      bool rockerA0Pushed = false;
+      uint32_t rockerA0PushedStartTime = 0;
+      bool rockerA1Pushed = false;
+      uint32_t rockerA1PushedStartTime = 0;
+      bool rockerB0Pushed = false;
+      uint32_t rockerB0PushedStartTime = 0;
+      bool rockerB1Pushed = false;
+      uint32_t rockerB1PushedStartTime = 0;
+      bool rockerANotificationPending = false;
+      bool rockerBNotificationPending = false;
+      uint8_t rockerAPushedType = PUSHED_UNDEFINED;
+      uint8_t rockerBPushedType = PUSHED_UNDEFINED;
+    };
+
+    std::map<std::string, bleSwitch> bleSwitches;
+
   private:
     TaskHandle_t TaskHandleEnocean_PTM215b;
     BaseType_t xHigherPriorityTaskWoken;
@@ -29,10 +47,16 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     void pushNotificationToQueue();
     void onResult(BLEAdvertisedDevice advertisedDevice) override;
 
-    void handleButtonAction(uint8_t switchStatus);
+    void handleButtonAction(uint8_t switchStatus, std::string bleAddress);
+    uint8_t getNotificationStatus(std::string bleAddress, uint8_t rocker);
+    void registerBleSwitch(std::string bleAddress);
 
     char securityKey[16] = {0};
     esp_bd_addr_t scannedBleAddress;
+
+    
+    
+    
 
     /** Contents of a payload telegram */
     struct payload{
