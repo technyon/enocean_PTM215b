@@ -6,6 +6,7 @@
  *      Author: Jeroen
  */
 
+#include "enocean_PTM215b.h"
 #include "BLEDevice.h"
 #include "BLEAdvertisedDevice.h"
 #include "enocean_PTM215bConstants.h"
@@ -24,24 +25,28 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     virtual void initialize();
 
     struct bleSwitch{
+      uint8_t rockerType = SINGLE_ROCKER;
       bool rockerA0Pushed = false;
       uint32_t rockerA0PushedStartTime = 0;
+      uint8_t rockerA0PushedType = PUSHED_UNDEFINED;
       bool rockerA1Pushed = false;
       uint32_t rockerA1PushedStartTime = 0;
+      uint8_t rockerA1PushedType = PUSHED_UNDEFINED;
       bool rockerB0Pushed = false;
       uint32_t rockerB0PushedStartTime = 0;
+      uint8_t rockerB0PushedType = PUSHED_UNDEFINED;
       bool rockerB1Pushed = false;
       uint32_t rockerB1PushedStartTime = 0;
+      uint8_t rockerB1PushedType = PUSHED_UNDEFINED;
       bool rockerANotificationPending = false;
       bool rockerBNotificationPending = false;
-      uint8_t rockerAPushedType = PUSHED_UNDEFINED;
-      uint8_t rockerBPushedType = PUSHED_UNDEFINED;
     };
 
     std::map<std::string, bleSwitch> bleSwitches;
 
   private:
     TaskHandle_t TaskHandleEnocean_PTM215b;
+    TaskHandle_t TaskHandleBleScan;
     BaseType_t xHigherPriorityTaskWoken;
     void startEnocean_PTM215bBleXtask();
     void pushNotificationToQueue();
@@ -53,10 +58,6 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
 
     char securityKey[16] = {0};
     esp_bd_addr_t scannedBleAddress;
-
-    
-    
-    
 
     /** Contents of a payload telegram */
     struct payload{
@@ -77,4 +78,8 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
         char securityKey[16] 		    = {0};
         char staticSourceAddress[6] = {0};
     };
+
+    payload lastNewPayload;
+    std::string lastAddress;
+
 };

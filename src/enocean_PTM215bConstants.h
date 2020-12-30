@@ -8,11 +8,14 @@
 #define BT_ENOCEAN_SWITCH_B0            120
 #define BT_ENOCEAN_SWITCH_B1            130
 
+#define SINGLE_ROCKER                   0
+#define DUAL_ROCKER                     1
+
 #define PUSHED_SHORT                    0
 #define PUSHED_LONG                     1
 #define PUSHED_UNDEFINED                3
 
-#define LONG_PRESS_INTERVAL_MS          100
+#define LONG_PRESS_INTERVAL_MS          1000
 
 /** Double rocker switch top left button (OA) */
 #define BT_ENOCEAN_SWITCH_A0_PUSH 		3
