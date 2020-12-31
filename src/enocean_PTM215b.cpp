@@ -95,6 +95,7 @@ void Enocean_PTM215b::startEnocean_PTM215bBleXtask(){
 void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
   static BLEAddress *serverBleAddressObj;
   uint8_t payloadLen = 0;
+  esp_bd_addr_t scannedBleAddress;
   serverBleAddressObj = new BLEAddress(advertisedDevice.getAddress());
   memcpy(scannedBleAddress, serverBleAddressObj->getNative(), 6);
 
@@ -113,7 +114,7 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
         handleCommissioningPayload(serverBleAddressObj->toString());
       }
       else{
-        log_e("BLE Payload size does not match");
+        log_e("BLE Payload size does not match for Enocean switch");
         return;
       }
     }
@@ -124,17 +125,16 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
 void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
   //TODO: needs to move to routine that handles registering/storing ble switches 
   registerBleSwitch(bleAddress, 0);
-  //ignore double/triple messages as switch always sends three messages per action
-  // log_d("current status: %d, lastStatus: %d, current address: %s, lastAddress: %s", payloadBuffer.switchStatus, lastNewPayload.switchStatus, serverBleAddressObj->toString().c_str(), lastAddress.c_str());
-  if(dataPayloadBuffer.switchStatus != lastNewDataPayload.switchStatus || bleAddress != lastAddress ){
 
-    // printBuffer((byte*)scannedBleAddress, 6, false, "BLE address");
-    // printBuffer((byte*)payloadBuffer.len, 1, false, "PayloadLen");
-    // printBuffer((byte*)payloadBuffer.type, 1, false, "PayloadType");
-    // printBuffer((byte*)payloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
-    // log_d("PayloadseqCounter: %d", payloadBuffer.sequenceCounter);
-    // log_d("PayloadSwitchStatus: %d", payloadBuffer.switchStatus);
-    // printBuffer((byte*)payloadBuffer.optionalData, 4, false, "PayloadOptionalData");
+  //ignore double/triple messages as switch always sends three messages per action
+  if(dataPayloadBuffer.switchStatus != lastNewDataPayload.switchStatus || bleAddress != lastAddress ){
+    // log_d("BLE address: %s", bleAddress.c_str());
+    // printBuffer((byte*)dataPayloadBuffer.len, 1, false, "PayloadLen");
+    // printBuffer((byte*)dataPayloadBuffer.type, 1, false, "PayloadType");
+    // printBuffer((byte*)dataPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
+    // log_d("PayloadseqCounter: %d", dataPayloadBuffer.sequenceCounter);
+    // log_d("PayloadSwitchStatus: %d", dataPayloadBuffer.switchStatus);
+    // printBuffer((byte*)dataPayloadBuffer.optionalData, 4, false, "PayloadOptionalData");
     printBuffer((byte*)dataPayloadBuffer.securityKey, 4, false, "PayloadsecurityKey");
 
     
@@ -151,11 +151,18 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
 }
 
 void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
+  //  log_d("BLE address: %s", bleAddress.c_str());
+    printBuffer((byte*)commissioningPayloadBuffer.len, 1, false, "PayloadLen");
+    printBuffer((byte*)commissioningPayloadBuffer.type, 1, false, "PayloadType");
+    printBuffer((byte*)commissioningPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
+    log_d("PayloadseqCounter: %d", commissioningPayloadBuffer.sequenceCounter);
+    printBuffer((byte*)commissioningPayloadBuffer.securityKey, 16, false, "securitykey");
+    printBuffer((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false, "PayloadOptionalData");
 }
 
 void Enocean_PTM215b::registerBleSwitch(std::string bleAddress, uint8_t switchId){
   bleSwitch buffer;
-  bleSwitches.insert( std::pair<std::string,bleSwitch>(bleAddress,buffer) );
+  bleSwitches.insert(std::pair<std::string,bleSwitch>(bleAddress,buffer) );
   bleSwitches[bleAddress].switchId = switchId;
   bleSwitches[bleAddress].rockerType = ROCKER_A;
 }
