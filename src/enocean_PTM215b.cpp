@@ -39,7 +39,7 @@ void bleScanTask(void * pvParameters) {
   pBLEScan->setWindow(23);
 
 	while (1){
-    pBLEScan->start(0);
+    pBLEScan->start(0,true);
   }
 }
 
@@ -49,7 +49,7 @@ void enocean_PTM215bBleTask(void * pvParameters) {
   
 	while (1){
     delay(500);
-    
+    log_d("memory: %d", esp_get_free_heap_size());
     //check for long button press
     for (auto bleSwitch : enocean_PTM215bObj->bleSwitches){
       if(bleSwitch.second.rockerA0Pushed && ( (millis() - LONG_PRESS_INTERVAL_MS) > bleSwitch.second.rockerA0PushedStartTime) ){
@@ -131,6 +131,7 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
       }
     }
   }
+  delete serverBleAddressObj;
 }
 
 uint8_t Enocean_PTM215b::getNotificationStatus(std::string bleAddress, uint8_t rocker){
