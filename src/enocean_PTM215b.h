@@ -25,7 +25,8 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     virtual void initialize();
 
     struct bleSwitch{
-      uint8_t rockerType = SINGLE_ROCKER;
+      uint8_t switchId = 0;
+      uint8_t rockerType = 0;
       bool rockerA0Pushed = false;
       uint32_t rockerA0PushedStartTime = 0;
       uint8_t rockerA0PushedType = PUSHED_UNDEFINED;
@@ -40,37 +41,25 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
       uint8_t rockerB1PushedType = PUSHED_UNDEFINED;
       bool rockerANotificationPending = false;
       bool rockerBNotificationPending = false;
+      uint32_t lastSequenceCounter = 0;
     };
 
     std::map<std::string, bleSwitch> bleSwitches;
 
   private:
-    TaskHandle_t TaskHandleEnocean_PTM215b;
-    TaskHandle_t TaskHandleBleScan;
-    BaseType_t xHigherPriorityTaskWoken;
-    void startEnocean_PTM215bBleXtask();
-    void pushNotificationToQueue();
-    void onResult(BLEAdvertisedDevice advertisedDevice) override;
-
-    void handleButtonAction(uint8_t switchStatus, std::string bleAddress);
-    uint8_t getNotificationStatus(std::string bleAddress, uint8_t rocker);
-    void registerBleSwitch(std::string bleAddress);
-
-    char securityKey[16] = {0};
-    esp_bd_addr_t scannedBleAddress;
-
     /** Contents of a payload telegram */
-    struct payload{
-        char len[1] 			      = {0};
-        char type[1] 			      = {0};
-        char manufacturerId[2] 	= {0};
-        char sequenceCounter[4] = {0};
-        uint8_t switchStatus    = 0;
-        char optionalData[4] 	  = {0};
+    struct dataPayload{
+        char len[1] 			        = {0};
+        char type[1] 			        = {0};
+        char manufacturerId[2] 	  = {0};
+        uint32_t sequenceCounter  = 0;
+        uint8_t switchStatus      = 0;
+        char optionalData[4] 	    = {0};
+        char securityKey[4]   	  = {0};
     };
 
     /** Contents of a commissioning telegram */
-    struct commissioning{
+    struct commissioningPayload{
         char len[1] 				        = {0};
         char type[1] 				        = {0};
         char manufacturerId[2] 		  = {0};
@@ -79,7 +68,26 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
         char staticSourceAddress[6] = {0};
     };
 
-    payload lastNewPayload;
+    TaskHandle_t TaskHandleEnocean_PTM215b;
+    TaskHandle_t TaskHandleBleScan;
+    BaseType_t xHigherPriorityTaskWoken;
+    void startEnocean_PTM215bBleXtask();
+    void pushNotificationToQueue();
+    void onResult(BLEAdvertisedDevice advertisedDevice) override;
+    void handleDataPayload(std::string bleAddress);
+    void handleCommissioningPayload(std::string bleAddress);
+
+    void handleSwitchAction(uint8_t switchStatus, std::string bleAddress);
+    void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
+    void registerBleSwitch(std::string bleAddress, uint8_t switchId);
+
+    char securityKey[16] = {0};
+    esp_bd_addr_t scannedBleAddress;
+
+    dataPayload dataPayloadBuffer;
+    commissioningPayload commissioningPayloadBuffer;
+
+    dataPayload lastNewDataPayload;
     std::string lastAddress;
 
 };

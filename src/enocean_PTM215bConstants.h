@@ -8,8 +8,8 @@
 #define BT_ENOCEAN_SWITCH_B0            120
 #define BT_ENOCEAN_SWITCH_B1            130
 
-#define SINGLE_ROCKER                   0
-#define DUAL_ROCKER                     1
+#define ROCKER_A                        1
+#define ROCKER_B                        2
 
 #define PUSHED_SHORT                    0
 #define PUSHED_LONG                     1
