@@ -54,7 +54,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
         char manufacturerId[2] 	  = {0};
         uint32_t sequenceCounter  = 0;
         uint8_t switchStatus      = 0;
-        char optionalData[4] 	    = {0};
+        // char optionalData[4] 	    = {0};  //TODO, make option to also read optional data when required
         char securityKey[4]   	  = {0};
     };
 
@@ -82,7 +82,6 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     void registerBleSwitch(std::string bleAddress, uint8_t switchId);
 
     char securityKey[16] = {0};
-    esp_bd_addr_t scannedBleAddress;
 
     dataPayload dataPayloadBuffer;
     commissioningPayload commissioningPayloadBuffer;

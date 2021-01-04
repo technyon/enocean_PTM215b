@@ -105,8 +105,9 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
   if(scannedBleAddress[0] == PMT215B_STATIC_SOURCE_ADDRESS_FIRST_BYTE && scannedBleAddress[1] == PMT215B_STATIC_SOURCE_ADDRESS_SECOND_BYTE){
     //check that GAP AD Type is 0xFF and for correct manufacturer id
     if(advertisedDevice.getPayload()[1] == 0xFF && advertisedDevice.getPayload()[2] == 0xDA && advertisedDevice.getPayload()[3] == 0x03){
-      //Check if data (13-17 bytes) or commissioning (30) payload
-      if(payloadLen < 17 ){
+      //Check if data (13 bytes) or commissioning (30) payload
+      //TODO: make option to also read optional data when required, then data payload can be 13-17 bytes
+      if(payloadLen == 13 ){
         memcpy(&dataPayloadBuffer, advertisedDevice.getPayload(), payloadLen+1);
         handleDataPayload(serverBleAddressObj->toString());
       } else if(payloadLen == 30){
