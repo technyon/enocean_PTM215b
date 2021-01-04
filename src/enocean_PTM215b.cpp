@@ -143,8 +143,7 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
 
     
     //check if new sequence nr is larger than last (prevent replay or hack)
-    if(bleSwitches[bleAddress].lastSequenceCounter < dataPayloadBuffer.sequenceCounter){
-      securityKeyValid(bleAddress);
+    if(bleSwitches[bleAddress].lastSequenceCounter < dataPayloadBuffer.sequenceCounter && securityKeyValid(bleAddress)){
       handleSwitchAction(dataPayloadBuffer.switchStatus, bleAddress);
       //save last sequence nr
       bleSwitches[bleAddress].lastSequenceCounter = dataPayloadBuffer.sequenceCounter;
@@ -221,46 +220,50 @@ bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
   unsigned char s0[16] = {0};
   unsigned char t0[16] = {0};
 
-  printBuffer((byte*)tempSecurityKey, 16, false, "sec key");
   mbedtls_aes_setkey_enc( &aes, (const unsigned char*) tempSecurityKey, strlen(tempSecurityKey) * 8 );
   
   //calculate X1 from B0
-  char testInput[16] = {0x49, 0xf9, 0x72, 0x01, 0x00, 0x15, 0xe2, 0x00, 0x00, 0x04, 0x2e, 0x00, 0x00, 0x00, 0x00, 0x00};
-  printBuffer((byte*)testInput, 16, false, "test input");
-  mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, (const unsigned char*)testInput, x1);
-  printBuffer((byte*)x1, 16, false, "output x1");
-
+  mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)b0, x1);
   
-  // //xor X1 B1
-  // for(int i = 0; i < 16; ++i){
-  //   x1a[i] = x1[i] ^ b1[i];
-  // }
+  //xor X1 B1
+  for(int i = 0; i < 16; ++i){
+    x1a[i] = x1[i] ^ b1[i];
+  }
 
-  // //calculate X2 from X1A
-  // mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, (const unsigned char*)x1a, x2);
+  //calculate X2 from X1A
+  mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)x1a, x2);
   
-  // //calculate S0 from A0
-  // mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, (const unsigned char*)a0, s0);
+  //calculate S0 from A0
+  mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)a0, s0);
 
-  // //xor X2 S0
-  // for(int i = 0; i < 16; ++i){
-  //   t0[i] = x2[i] ^ s0[i];
-  // }
+  //xor X2 S0
+  for(int i = 0; i < 16; ++i){
+    t0[i] = x2[i] ^ s0[i];
+  }
 
-  // #ifdef DEBUG_ENCRYPTION
-  //   printBuffer((byte*)nonce, sizeof(nonce), false, "Nonce:");
-  //   printBuffer((byte*)a0, sizeof(a0), false, "A0   :");
-  //   printBuffer((byte*)b0, sizeof(b0), false, "B0   :");
-  //   printBuffer((byte*)b1, sizeof(b1), false, "B1   :");
-  //   printBuffer((byte*)x1, sizeof(x1), false, "X1   :");
-  //   printBuffer((byte*)x1a, sizeof(x1a), false, "X1A  :");
-  //   printBuffer((byte*)x2, sizeof(x2), false, "X2   :");
-  //   printBuffer((byte*)x2, sizeof(x2), false, "S2   :");
-  //   printBuffer((byte*)t0, sizeof(t0), false, "T0   :");
-  // #endif
+  #ifdef DEBUG_ENCRYPTION
+    printBuffer((byte*)tempSecurityKey, 16, false, "sec key");
+    printBuffer((byte*)nonce, sizeof(nonce), false, "Nonce:");
+    printBuffer((byte*)a0, sizeof(a0), false, "A0   :");
+    printBuffer((byte*)b0, sizeof(b0), false, "B0   :");
+    printBuffer((byte*)b1, sizeof(b1), false, "B1   :");
+    printBuffer((byte*)x1, sizeof(x1), false, "X1   :");
+    printBuffer((byte*)x1a, sizeof(x1a), false, "X1A  :");
+    printBuffer((byte*)x2, sizeof(x2), false, "X2   :");
+    printBuffer((byte*)s0, sizeof(s0), false, "S2   :");
+    printBuffer((byte*)t0, sizeof(t0), false, "T0   :");
+  #endif
 
   mbedtls_aes_free( &aes );
-  return true;
+
+  if(t0[0] == dataPayloadBuffer.receivedSecurityKey[0] && t0[1] == dataPayloadBuffer.receivedSecurityKey[1] && t0[2] == dataPayloadBuffer.receivedSecurityKey[2] 
+      && t0[3] == dataPayloadBuffer.receivedSecurityKey[3]){
+    return true;
+  }
+  else{
+    log_e("Incorrect security key");
+    return false;
+  }
 }
 
 void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {

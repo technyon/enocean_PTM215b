@@ -46,9 +46,6 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
 
     std::map<std::string, bleSwitch> bleSwitches;
 
-    // char tempSecurityKey[32] = {'1','C','B','9','5','C','E','6','3','F','1','9','A','D','C','7','E','0','F','B','9','2','D','A','5','6','D','6','9','2','1','9'};
-    
-
   private:
     /** Contents of a payload telegram */
     struct dataPayload{

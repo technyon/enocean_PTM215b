@@ -1,5 +1,5 @@
-#define DEBUG_DATA 1
-#define DEBUG_ENCRYPTION 1
+// #define DEBUG_DATA
+// #define DEBUG_ENCRYPTION
 
 /** Manufacturer data */
 #define ENOCEAN_MANUFACTURER_ID 0x03DA
