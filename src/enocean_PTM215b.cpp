@@ -6,6 +6,7 @@
  */
 
 #include "enocean_PTM215b.h"
+#include "mbedtls/aes.h"
 
 void printBuffer(const byte* buff, const uint8_t size, const boolean asChars, const char* header) {
   delay(100); //delay otherwise first part of print will not be shown 
@@ -129,18 +130,21 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
 
   //ignore double/triple messages as switch always sends three messages per action
   if(dataPayloadBuffer.switchStatus != lastNewDataPayload.switchStatus || bleAddress != lastAddress ){
-    // log_d("BLE address: %s", bleAddress.c_str());
-    // printBuffer((byte*)dataPayloadBuffer.len, 1, false, "PayloadLen");
-    // printBuffer((byte*)dataPayloadBuffer.type, 1, false, "PayloadType");
-    // printBuffer((byte*)dataPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
-    // log_d("PayloadseqCounter: %d", dataPayloadBuffer.sequenceCounter);
-    // log_d("PayloadSwitchStatus: %d", dataPayloadBuffer.switchStatus);
-    // printBuffer((byte*)dataPayloadBuffer.optionalData, 4, false, "PayloadOptionalData");
-    printBuffer((byte*)dataPayloadBuffer.securityKey, 4, false, "PayloadsecurityKey");
+    #ifdef DEBUG_DATA
+      log_d("BLE address: %s", bleAddress.c_str());
+      printBuffer((byte*)dataPayloadBuffer.len, 1, false, "PayloadLen");
+      printBuffer((byte*)dataPayloadBuffer.type, 1, false, "PayloadType");
+      printBuffer((byte*)dataPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
+      log_d("PayloadseqCounter: %d", dataPayloadBuffer.sequenceCounter);
+      log_d("PayloadSwitchStatus: %d", dataPayloadBuffer.switchStatus);
+      // printBuffer((byte*)dataPayloadBuffer.optionalData, 4, false, "PayloadOptionalData");
+      printBuffer((byte*)dataPayloadBuffer.receivedSecurityKey, 4, false, "PayloadsecurityKey");
+    #endif
 
     
     //check if new sequence nr is larger than last (prevent replay or hack)
     if(bleSwitches[bleAddress].lastSequenceCounter < dataPayloadBuffer.sequenceCounter){
+      securityKeyValid(bleAddress);
       handleSwitchAction(dataPayloadBuffer.switchStatus, bleAddress);
       //save last sequence nr
       bleSwitches[bleAddress].lastSequenceCounter = dataPayloadBuffer.sequenceCounter;
@@ -151,14 +155,124 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
   }
 }
 
+bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
+  unsigned char  nonce[13] = {0};
+  unsigned char  leSourceAddress[6] = {0}; //little endian
+  uint8_t a0Flag = 0x01;
+  uint8_t b0Flag = 0x49;
+  uint16_t inputLength = 9;
+  unsigned char  a0[16] = {0};
+  unsigned char  b0[16] = {0};
+  unsigned char  b1[16] = {0};
+
+  leSourceAddress[0] = strtol(bleAddress.substr(15,2).c_str(), NULL, 16);
+  leSourceAddress[1] = strtol(bleAddress.substr(12,2).c_str(), NULL, 16);
+  leSourceAddress[2] = strtol(bleAddress.substr(9,2).c_str(), NULL, 16);
+  leSourceAddress[3] = strtol(bleAddress.substr(6,2).c_str(), NULL, 16);
+  leSourceAddress[4] = strtol(bleAddress.substr(3,2).c_str(), NULL, 16);
+  leSourceAddress[5] = strtol(bleAddress.substr(0,2).c_str(), NULL, 16);
+
+  //construct nonce
+  memcpy(&nonce[0], leSourceAddress, sizeof(leSourceAddress));
+  nonce[6] = (dataPayloadBuffer.sequenceCounter >> (8*0)) & 0xff;
+  nonce[7] = (dataPayloadBuffer.sequenceCounter >> (8*1)) & 0xff;
+  nonce[8] = (dataPayloadBuffer.sequenceCounter >> (8*2)) & 0xff;
+  nonce[9] = (dataPayloadBuffer.sequenceCounter >> (8*3)) & 0xff;
+  nonce[10] = (0x00 >> (8*0)) & 0xff;
+  nonce[11] = (0x00 >> (8*0)) & 0xff;
+  nonce[12] = (0x00 >> (8*0)) & 0xff;
+
+  //construct a0 input parameter
+  a0[0] = (a0Flag >> (8*0)) & 0xff;
+  memcpy(&a0[1], nonce, sizeof(nonce));
+  a0[14] = (0x00 >> (8*0)) & 0xff;
+  a0[15] = (0x00 >> (8*0)) & 0xff;
+
+  //construct b0 input parameter
+  b0[0] = (b0Flag >> (8*0)) & 0xff;
+  memcpy(&b0[1], nonce, sizeof(nonce));
+  b0[14] = (0x00 >> (8*0)) & 0xff;
+  b0[15] = (0x00 >> (8*0)) & 0xff;
+
+  //construct b1 input parameter
+  b1[0] = (inputLength >> (8*1)) & 0xff;
+  b1[1] = (inputLength >> (8*0)) & 0xff;
+  memcpy(&b1[2], dataPayloadBuffer.len, sizeof(dataPayloadBuffer.len));
+  memcpy(&b1[3], dataPayloadBuffer.type, sizeof(dataPayloadBuffer.type));
+  memcpy(&b1[4], dataPayloadBuffer.manufacturerId, sizeof(dataPayloadBuffer.manufacturerId));
+  b1[6] = (dataPayloadBuffer.sequenceCounter >> (8*0)) & 0xff;
+  b1[7] = (dataPayloadBuffer.sequenceCounter >> (8*1)) & 0xff;
+  b1[8] = (dataPayloadBuffer.sequenceCounter >> (8*2)) & 0xff;
+  b1[9] = (dataPayloadBuffer.sequenceCounter >> (8*3)) & 0xff;
+  b1[10] = (dataPayloadBuffer.switchStatus >> (8*0)) & 0xff;
+  b1[11] = (0x00 >> (8*0)) & 0xff;
+  b1[12] = (0x00 >> (8*0)) & 0xff;
+  b1[13] = (0x00 >> (8*0)) & 0xff;
+  b1[14] = (0x00 >> (8*0)) & 0xff;
+  b1[15] = (0x00 >> (8*0)) & 0xff;
+
+  mbedtls_aes_context aes;
+  mbedtls_aes_init( &aes );
+
+  char tempSecurityKey[16] = { 0x1C, 0xB9, 0x5C, 0xE6, 0x3F, 0x19, 0xAD, 0xC7, 0xE0, 0xFB, 0x92, 0xDA, 0x56, 0xD6, 0x92, 0x19};
+  unsigned char x1[16] = {0};
+  unsigned char x1a[16] = {0};
+  unsigned char x2[16] = {0};
+  unsigned char s0[16] = {0};
+  unsigned char t0[16] = {0};
+
+  printBuffer((byte*)tempSecurityKey, 16, false, "sec key");
+  mbedtls_aes_setkey_enc( &aes, (const unsigned char*) tempSecurityKey, strlen(tempSecurityKey) * 8 );
+  
+  //calculate X1 from B0
+  char testInput[16] = {0x49, 0xf9, 0x72, 0x01, 0x00, 0x15, 0xe2, 0x00, 0x00, 0x04, 0x2e, 0x00, 0x00, 0x00, 0x00, 0x00};
+  printBuffer((byte*)testInput, 16, false, "test input");
+  mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, (const unsigned char*)testInput, x1);
+  printBuffer((byte*)x1, 16, false, "output x1");
+
+  
+  // //xor X1 B1
+  // for(int i = 0; i < 16; ++i){
+  //   x1a[i] = x1[i] ^ b1[i];
+  // }
+
+  // //calculate X2 from X1A
+  // mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, (const unsigned char*)x1a, x2);
+  
+  // //calculate S0 from A0
+  // mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_DECRYPT, (const unsigned char*)a0, s0);
+
+  // //xor X2 S0
+  // for(int i = 0; i < 16; ++i){
+  //   t0[i] = x2[i] ^ s0[i];
+  // }
+
+  // #ifdef DEBUG_ENCRYPTION
+  //   printBuffer((byte*)nonce, sizeof(nonce), false, "Nonce:");
+  //   printBuffer((byte*)a0, sizeof(a0), false, "A0   :");
+  //   printBuffer((byte*)b0, sizeof(b0), false, "B0   :");
+  //   printBuffer((byte*)b1, sizeof(b1), false, "B1   :");
+  //   printBuffer((byte*)x1, sizeof(x1), false, "X1   :");
+  //   printBuffer((byte*)x1a, sizeof(x1a), false, "X1A  :");
+  //   printBuffer((byte*)x2, sizeof(x2), false, "X2   :");
+  //   printBuffer((byte*)x2, sizeof(x2), false, "S2   :");
+  //   printBuffer((byte*)t0, sizeof(t0), false, "T0   :");
+  // #endif
+
+  mbedtls_aes_free( &aes );
+  return true;
+}
+
 void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
-  //  log_d("BLE address: %s", bleAddress.c_str());
+  #ifdef DEBUG_DATA
+    log_d("BLE address: %s", bleAddress.c_str());
     printBuffer((byte*)commissioningPayloadBuffer.len, 1, false, "PayloadLen");
     printBuffer((byte*)commissioningPayloadBuffer.type, 1, false, "PayloadType");
     printBuffer((byte*)commissioningPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
     log_d("PayloadseqCounter: %d", commissioningPayloadBuffer.sequenceCounter);
     printBuffer((byte*)commissioningPayloadBuffer.securityKey, 16, false, "securitykey");
     printBuffer((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false, "PayloadOptionalData");
+  #endif
 }
 
 void Enocean_PTM215b::registerBleSwitch(std::string bleAddress, uint8_t switchId){

@@ -46,16 +46,20 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
 
     std::map<std::string, bleSwitch> bleSwitches;
 
+    // char tempSecurityKey[32] = {'1','C','B','9','5','C','E','6','3','F','1','9','A','D','C','7','E','0','F','B','9','2','D','A','5','6','D','6','9','2','1','9'};
+    
+
   private:
     /** Contents of a payload telegram */
     struct dataPayload{
-        char len[1] 			        = {0};
-        char type[1] 			        = {0};
-        char manufacturerId[2] 	  = {0};
-        uint32_t sequenceCounter  = 0;
-        uint8_t switchStatus      = 0;
-        // char optionalData[4] 	    = {0};  //TODO, make option to also read optional data when required
-        char securityKey[4]   	  = {0};
+        char len[1] 			                  = {0};
+        char type[1] 			                  = {0};
+        char manufacturerId[2] 	            = {0};
+        uint32_t sequenceCounter            = 0;
+        uint8_t switchStatus                = 0;
+        // char optionalData[4] 	          = {0};  //TODO, make option to also read optional data when required
+        char receivedSecurityKey[4]         = {0};
+        char storedSecurityKey[32]          = {0};
     };
 
     /** Contents of a commissioning telegram */
@@ -76,6 +80,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     void onResult(BLEAdvertisedDevice advertisedDevice) override;
     void handleDataPayload(std::string bleAddress);
     void handleCommissioningPayload(std::string bleAddress);
+    bool securityKeyValid(std::string bleAddress);
 
     void handleSwitchAction(uint8_t switchStatus, std::string bleAddress);
     void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
