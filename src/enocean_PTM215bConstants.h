@@ -1,5 +1,7 @@
 // #define DEBUG_DATA
+// #define DEBUG_COMMISSIONING_DATA
 // #define DEBUG_ENCRYPTION
+// #define DEBUG_REGISTER_CONFIG
 
 /** Manufacturer data */
 #define ENOCEAN_MANUFACTURER_ID 0x03DA
