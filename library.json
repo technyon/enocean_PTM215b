@@ -24,6 +24,10 @@
         "flags": "-Wno-unused-function"
     },
     "dependencies": [
-     
+      {
+        "name": "ArduinoJson",
+        "version": "bblanchon/ArduinoJson"
+    }
+
   ]
 }
