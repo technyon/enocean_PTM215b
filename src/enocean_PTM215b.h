@@ -86,8 +86,8 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
 
     /** Contents of a commissioning telegram */
     struct CommissioningPayload{
-        char len[1] 				        = {0};
-        char type[1] 				        = {0};
+        unsigned char len 				  = 0x00;
+        unsigned char type 				  = 0x00;
         char manufacturerId[2] 		  = {0};
         char sequenceCounter[4] 	  = {0};
         char securityKey[16] 		    = {0};
@@ -97,7 +97,6 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     TaskHandle_t repeatEventsTaskHandle;
     TaskHandle_t bleScanTaskHandle;
     Eventhandler& eventHandler;
-    char securityKey[16] = {0};
     DataPayload dataPayloadBuffer;
     CommissioningPayload commissioningPayloadBuffer;
 
@@ -117,7 +116,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     * 
     * @param -
     */
-    void startBleTasks();
+    void startTasks();
     
     /**
     * @brief overridden method from BLE to handle advertisement events. Checks manufacturer specific

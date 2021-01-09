@@ -74,13 +74,13 @@ void Enocean_PTM215b::initialize() {
     log_e("BLEDevice not initialized");
     return;
   }
-  startBleTasks();
+  startTasks();
 }
 
 
-void Enocean_PTM215b::startBleTasks(){
+void Enocean_PTM215b::startTasks(){
   xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, 1);
-  xTaskCreatePinnedToCore(&bleScanTask, "PMS215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, 1);
+  xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, 1);
 }
 
 void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -133,9 +133,9 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
     #endif
 
     if (securityKeyValid(bleAddress)){
-      handleSwitchAction(dataPayloadBuffer.switchStatus, bleAddress);
       //save last sequence nr
       bleSwitches[bleAddress].lastSequenceCounter = dataPayloadBuffer.sequenceCounter;
+      handleSwitchAction(dataPayloadBuffer.switchStatus, bleAddress);
     }
   }
 }
@@ -184,7 +184,6 @@ bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
   b1[9] = (dataPayloadBuffer.sequenceCounter >> (8*3)) & 0xff;
   b1[10] = dataPayloadBuffer.switchStatus;
   
-  // char tempSecurityKey[16] = { 0x1C, 0xB9, 0x5C, 0xE6, 0x3F, 0x19, 0xAD, 0xC7, 0xE0, 0xFB, 0x92, 0xDA, 0x56, 0xD6, 0x92, 0x19};
   unsigned char x1[16] = {0};
   unsigned char x1a[16] = {0};
   unsigned char x2[16] = {0};
@@ -231,9 +230,7 @@ bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
     log_d("## END encryption data ##");
   #endif
 
-
-  if(t0[0] == dataPayloadBuffer.receivedSecurityKey[0] && t0[1] == dataPayloadBuffer.receivedSecurityKey[1] && t0[2] == dataPayloadBuffer.receivedSecurityKey[2] 
-      && t0[3] == dataPayloadBuffer.receivedSecurityKey[3]){
+  if (memcmp(t0, dataPayloadBuffer.receivedSecurityKey, 4) == 0) {
     return true;
   }
   else{
@@ -258,17 +255,17 @@ void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
 
 void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB){
   BleSwitch bleSwitch;
+  hexStringToCharArray(securityKey, bleSwitch.securityKey, 16);
+  bleSwitch.nodeIdA = nodeIdA;
+  bleSwitch.nodeIdB = nodeIdB;
   bleSwitches.insert(std::pair<std::string, BleSwitch>(bleAddress, bleSwitch));
-  hexStringToCharArray(securityKey, bleSwitches[bleAddress].securityKey, 16);
-  bleSwitches[bleAddress].nodeIdA = nodeIdA;
-  bleSwitches[bleAddress].nodeIdB = nodeIdB;
 
   #ifdef DEBUG_REGISTER_CONFIG
     log_d("## START Register BLE switch ##");
     log_d("BLE address: %s", bleAddress.c_str());
-    log_d("Rocker type: %d", bleSwitches[bleAddress].rockerType);
-    printBuffer((byte*)bleSwitches[bleAddress].securityKey, strlen(bleSwitches[bleAddress].securityKey), false, "Security key");
-    log_d("Ndoe id: %d", bleSwitches[bleAddress].nodeId);
+    printBuffer((byte*)bleSwitch.securityKey, strlen(bleSwitch.securityKey), false, "Security key");
+    log_d("NodeA id: %d", bleSwitch.nodeAId);
+    log_d("NodeB id: %d", bleSwitch.nodeBId);
     log_d("## END Register BLE switch ##");
   #endif
 }
@@ -290,7 +287,7 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::
   } else if (switchStatus && 0b000011000) {
     nodeId = bleSwitch.nodeIdB;
   } else {
-    log_e("Invalid switchStatus 0x02X", switchStatus);
+    log_e("Invalid switchStatus 0x%02X", switchStatus);
     return;
   }
 

@@ -52,5 +52,6 @@ Future implementations might include:
 * Handling events with multiple buttons pushed or held
 * Make timing of Repeat events configurable per rocker
 * Allow for other components to also receive BLEScan results (daisy-chaining)
+* Implement handling optional data in DataPayload
 
 
