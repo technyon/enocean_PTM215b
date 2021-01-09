@@ -2,9 +2,9 @@
   "bleSwitchesConfig" : [
     {
       "bleAddress": "e2:15:00:01:72:f9",
-      "rockerType": 1,
       "securityKey": "1CB95CE63F19ADC7E0FB92DA56D69219",
-      "observerId": 0
+      "nodeIdA": 0,
+      "nodeIdB": 1
     }
   ]
 }

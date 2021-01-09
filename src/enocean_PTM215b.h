@@ -6,68 +6,77 @@
  *      Author: Jeroen
  */
 
-#include "enocean_PTM215b.h"
 #include "BLEDevice.h"
 #include "BLEAdvertisedDevice.h"
 #include "enocean_PTM215bConstants.h"
 #include "Arduino.h"
 #include <map>
-#include "SPIFFS.h"
-#include "ArduinoJson.h"
+#include <vector>
 
-// #define BLE_DEBUG
+namespace PTM215b {
+
+enum class Direction {
+  Up, Down
+};
+
+enum class EventType {
+  Pushed,
+  Repeat,
+  Released
+};
+
+struct BleSwitch {
+  uint32_t lastSequenceCounter;
+  char securityKey[16] = {0};
+  uint8_t nodeIdA;
+  uint8_t nodeIdB;
+};
+
+struct BleSwitchEvent {
+  uint8_t nodeId;
+  Direction direction;
+  EventType eventType;
+  uint32_t pushStartTime;
+};
+
+class Eventhandler {
+public:
+    Eventhandler() {};
+    virtual ~Eventhandler() {};
+
+    virtual void handleEvent(BleSwitchEvent& evt) = 0;
+
+};
+
 
 class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
   public:
-    Enocean_PTM215b();
+    Enocean_PTM215b(Eventhandler& handler);
     virtual ~Enocean_PTM215b();
 
-    QueueHandle_t enocean_PTM215bBleIsrFlagQueue;
-    
     /**
     * @brief Initialize object, init BLE and spiffs, open and read config file, start tasks
-    * 
-    * @param -
     */
     virtual void initialize();
-    
+
     /**
-    * @brief Handle final result of switch action
+    * @brief Register a switch
     * 
-    * @param bleAddress BLE address of the switch
-    * @param rocker Was rocker A0, A1, B0 or B1 pushed
-    * @param switchResult Was rocker pushed long or short
+    * @param bleAddress BLE address of switch being handled
+    * @param securityKey Security key retreived from QR code, NFC or commissioning data 
+    * @param nodeIdA Id of device that "belongs" to this switch A rocker (can be used in handleSwitchResult)
+    * @param nodeIdB Id of device that "belongs" to this switch B rocker (can be used in handleSwitchResult)
     */
-    void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
+    void registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB);
 
-    struct bleSwitch{
-      uint8_t rockerType = 0;
-      bool rockerA0Pushed = false;
-      uint32_t rockerA0PushedStartTime = 0;
-      uint8_t rockerA0PushedType = PUSHED_UNDEFINED;
-      bool rockerA1Pushed = false;
-      uint32_t rockerA1PushedStartTime = 0;
-      uint8_t rockerA1PushedType = PUSHED_UNDEFINED;
-      bool rockerB0Pushed = false;
-      uint32_t rockerB0PushedStartTime = 0;
-      uint8_t rockerB0PushedType = PUSHED_UNDEFINED;
-      bool rockerB1Pushed = false;
-      uint32_t rockerB1PushedStartTime = 0;
-      uint8_t rockerB1PushedType = PUSHED_UNDEFINED;
-      bool rockerANotificationPending = false;
-      bool rockerBNotificationPending = false;
-      uint32_t lastSequenceCounter = 0;
-      char securityKey[16] = {0};
-      uint8_t observerId = 0;
-    };
-
-    std::map<std::string, bleSwitch> bleSwitches;
-
+    void generateRepeatEvents();
+    uint8_t registeredSwitchCount() { return bleSwitches.size(); }
+    
   private:
     /** Contents of a payload telegram */
-    struct dataPayload{
-        char len[1] 			                  = {0};
-        char type[1] 			                  = {0};
+    struct DataPayload{
+        unsigned char len                   = 0x00;
+        unsigned char type                  = 0x00;
         char manufacturerId[2] 	            = {0};
         uint32_t sequenceCounter            = 0;
         uint8_t switchStatus                = 0;
@@ -76,7 +85,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     };
 
     /** Contents of a commissioning telegram */
-    struct commissioningPayload{
+    struct CommissioningPayload{
         char len[1] 				        = {0};
         char type[1] 				        = {0};
         char manufacturerId[2] 		  = {0};
@@ -84,17 +93,31 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
         char securityKey[16] 		    = {0};
         char staticSourceAddress[6] = {0};
     };
-
-    TaskHandle_t TaskHandleEnocean_PTM215b;
-    TaskHandle_t TaskHandleBleScan;
-    BaseType_t xHigherPriorityTaskWoken;
     
+    TaskHandle_t repeatEventsTaskHandle;
+    TaskHandle_t bleScanTaskHandle;
+    Eventhandler& eventHandler;
+    char securityKey[16] = {0};
+    DataPayload dataPayloadBuffer;
+    CommissioningPayload commissioningPayloadBuffer;
+
+    /**
+     * @brief Map of registered switches by BleAddress
+     */
+    std::map<std::string, BleSwitch> bleSwitches;
+
+    /**
+     * @brief Map of Last events by NodeId
+     * 
+     */
+    std::map<uint8_t, BleSwitchEvent> events;
+
     /**
     * @brief Create queue and start BLE scan task and switch handling task for detecting long press
     * 
     * @param -
     */
-    void startEnocean_PTM215bBleXtask();
+    void startBleTasks();
     
     /**
     * @brief overridden method from BLE to handle advertisement events. Checks manufacturer specific
@@ -127,23 +150,16 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     bool securityKeyValid(std::string bleAddress);
 
     /**
-    * @brief Handles switch push and release actions
+    * @brief Handle final result of switch action
     * 
-    * @param switchStatus Push or release of switch A0, A1, B0 or B1
-    * @param bleAddress BLE address of switch being handled
+    * @param bleAddress BLE address of the switch
+    * @param rocker Was rocker A0, A1, B0 or B1 pushed
+    * @param switchResult Was rocker pushed long or short
     */
-    void handleSwitchAction(uint8_t switchStatus, std::string bleAddress);
+    // void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
+    void handleSwitchAction(const uint8_t switchStatus, const std::string bleAddress);
     
-    /**
-    * @brief Stores switch in map
-    * 
-    * @param bleAddress BLE address of switch being handled
-    * @param rockerType Defines Rocker A or B
-    * @param securityKey Security key retreived from QR code, NFC or commissioning data 
-    * @param observerId Id of device that "belongs" to this switch (can be used in handleSwitchResult)
-    */
-    void registerBleSwitch(std::string bleAddress, uint8_t rockerType, std::string securityKey, uint8_t observerId);
-    
+  
     /**
     * @brief Convert std::string holding 1 byte (2chars) hex data 
     * 
@@ -153,21 +169,6 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     */
     void hexStringToCharArray(std::string stringInput, char * charArrayOutput, uint8_t byteLength);
 
-    char securityKey[16] = {0};
-
-    dataPayload dataPayloadBuffer;
-    commissioningPayload commissioningPayloadBuffer;
-
-    dataPayload lastNewDataPayload;
-    std::string lastAddress;
-
-    DynamicJsonDocument readConfigFile(File& file);
-
-    /**
-    * @brief Parse JSON file and create nodes based on the config and hardcoded TerminalDefinitionsMap
-    * 
-    * @param file  JSON file to parse
-    */
-    void readSettingsFromJSON(File& file);
-
 };
+
+} // namespace
