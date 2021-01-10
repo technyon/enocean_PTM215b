@@ -45,7 +45,8 @@ void bleScanTask(void * pvParameters) {
       pBLEScan->start(10,true);
       pBLEScan->clearResults();
     } else {
-      delay(1000);
+      log_w("No switches registered");
+      delay(5000);
     }
   }
 }
@@ -118,12 +119,13 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
   }
 
   //ignore double/triple messages as switch always sends three messages per action
+  // log_d("lastsequence: %d, received sequence: %d", bleSwitches[bleAddress].lastSequenceCounter, dataPayloadBuffer.sequenceCounter);
   if (bleSwitches[bleAddress].lastSequenceCounter < dataPayloadBuffer.sequenceCounter){
     #ifdef DEBUG_DATA
-      log_d("## START data payload ##");
+      log_d("## Stored data payload ##");
       log_d("BLE address: %s", bleAddress.c_str());
-      printBuffer((byte*)dataPayloadBuffer.len, 1, false, "PayloadLen");
-      printBuffer((byte*)dataPayloadBuffer.type, 1, false, "PayloadType");
+      log_d("PayloadLen: %d", dataPayloadBuffer.len);
+      log_d("PayloadLen: %x", dataPayloadBuffer.type);
       printBuffer((byte*)dataPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
       log_d("PayloadseqCounter: %d", dataPayloadBuffer.sequenceCounter);
       log_d("PayloadSwitchStatus: %d", dataPayloadBuffer.switchStatus);
@@ -243,8 +245,8 @@ void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
   #ifdef DEBUG_COMMISSIONING_DATA
     log_d("## START commissioning payload ##");
     log_d("BLE address: %s", bleAddress.c_str());
-    printBuffer((byte*)commissioningPayloadBuffer.len, 1, false, "PayloadLen");
-    printBuffer((byte*)commissioningPayloadBuffer.type, 1, false, "PayloadType");
+    log_d("PayloadLen: %d", dataPayloadBuffer.len);
+    log_d("PayloadLen: %x", dataPayloadBuffer.type);
     printBuffer((byte*)commissioningPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
     log_d("PayloadseqCounter: %d", commissioningPayloadBuffer.sequenceCounter);
     printBuffer((byte*)commissioningPayloadBuffer.securityKey, 16, false, "securitykey");
@@ -264,15 +266,14 @@ void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std:
     log_d("## START Register BLE switch ##");
     log_d("BLE address: %s", bleAddress.c_str());
     printBuffer((byte*)bleSwitch.securityKey, strlen(bleSwitch.securityKey), false, "Security key");
-    log_d("NodeA id: %d", bleSwitch.nodeAId);
-    log_d("NodeB id: %d", bleSwitch.nodeBId);
+    log_d("NodeA id: %d", bleSwitch.nodeIdA);
+    log_d("NodeB id: %d", bleSwitch.nodeIdB);
     log_d("## END Register BLE switch ##");
   #endif
 }
 
 void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::string bleAddress){
   log_v("handling button action: %d from %s", switchStatus, bleAddress.c_str());
-
   if (bleSwitches.count(bleAddress) == 0) {
     log_w("No switch registered for address %d", bleAddress.c_str());
     return;
@@ -282,49 +283,76 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::
 
   // TODO Allow for simultaneous events on A and B
   uint8_t nodeId;
-  if (switchStatus && 0b000000110) {
+  // if (switchStatus && 0b000000110) {
+  //   nodeId = bleSwitch.nodeIdA;
+  // } else if (switchStatus && 0b000011000) {
+  //   nodeId = bleSwitch.nodeIdB;
+  // } else {
+  //   log_e("Invalid switchStatus 0x%02X", switchStatus);
+  //   return;
+  // }
+  if(switchStatus == 3 || switchStatus == 2 || switchStatus == 5 || switchStatus == 4){
     nodeId = bleSwitch.nodeIdA;
-  } else if (switchStatus && 0b000011000) {
+  }else{
     nodeId = bleSwitch.nodeIdB;
-  } else {
-    log_e("Invalid switchStatus 0x%02X", switchStatus);
-    return;
   }
 
-  // TODO Allow for simultaneous Directions
+  // TODO Allow for simultaneous Directions, you cannot push up and down simultaniously?????
   Direction direction;
-  if (switchStatus && 0b000001010) {
+  // if (switchStatus && 0b000001010) {
+  //   direction = Direction::Up;
+  // } else if (switchStatus && 0b000010100) {
+  //   direction = Direction::Down;
+  // } else {
+  //   log_e("No buttons specified");
+  //   return;
+  // }
+  if(switchStatus == 3 || switchStatus == 2 || switchStatus == 9 || switchStatus == 8){
     direction = Direction::Up;
-  } else if (switchStatus && 0b000010100) {
+  }else{
     direction = Direction::Down;
-  } else {
-    log_e("No buttons specified");
-    return;
   }
 
-  EventType type = (switchStatus && 0x01) ? EventType::Pushed : EventType::Released;
+  // ActionType type = (switchStatus && 0x01) ? ActionType::Pushed : ActionType::Released;
+
+  ActionType type;
+  if(switchStatus == 3 || switchStatus == 5 || switchStatus == 9 || switchStatus == 17){
+    type = ActionType::Pushed;
+  }else{
+    type = ActionType::Released;
+  }
+
+  BleSwitchAction action;
+  action.nodeId = nodeId;
+  action.actionType = type;
+  action.direction = direction;
 
   BleSwitchEvent event;
   event.nodeId = nodeId;
   event.direction = direction;
-  event.eventType = type;
-
-  eventHandler.handleEvent(event);
-  if (type == EventType::Released) {
-    events.erase(nodeId);
+  
+  if (type == ActionType::Released) {
+    if(millis() - LONG_PRESS_INTERVAL_MS < actions[nodeId].pushStartTime ){
+      event.eventType = EventType::PushedShort;
+      eventHandler.handleEvent(event);
+      actions.erase(nodeId);
+    }else{
+      actions.erase(nodeId);
+    }
   } else {
-    event.pushStartTime = millis();
-    events[nodeId] = event;
+    action.pushStartTime = millis();
+    actions[nodeId] = action;
   }
 }
 
 void Enocean_PTM215b::generateRepeatEvents() {
-  for (auto const& pair : events) {
-    BleSwitchEvent event = pair.second;
-    if (((event.eventType == EventType::Pushed) || (event.eventType == EventType::Repeat)) &&
-        (event.pushStartTime + LONG_PRESS_INTERVAL_MS < millis())) {
-          event.eventType = EventType::Repeat;
-          events[event.nodeId] = event;
+  for (auto const& pair : actions) {
+    BleSwitchAction action = pair.second;
+    if (millis() - LONG_PRESS_INTERVAL_MS > action.pushStartTime ) {
+          BleSwitchEvent event;
+          event.nodeId = action.nodeId;
+          event.direction = action.direction;
+          event.eventType = EventType::PushedLong;
           eventHandler.handleEvent(event);
         }
   }

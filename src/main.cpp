@@ -19,14 +19,11 @@ public:
 
       std::string type;
       switch (evt.eventType) {
-      case PTM215b::EventType::Pushed:
-        type = "Pushed";
+      case PTM215b::EventType::PushedLong:
+        type = "Pushed Long";
         break;
-      case PTM215b::EventType::Repeat:
-        type = "Repeat";
-        break;
-      case PTM215b::EventType::Released:
-        type = "Released";
+      case PTM215b::EventType::PushedShort:
+        type = "Pushed Short";
         break;
       
       default:
@@ -35,7 +32,7 @@ public:
 
       std::string direction = (evt.direction == PTM215b::Direction::Up) ? "Up" : "Down";
 
-      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s, PushStartTime: %d", evt.nodeId, type.c_str(), direction.c_str(), evt.pushStartTime);
+      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s", evt.nodeId, type.c_str(), direction.c_str());
     };
 
 };
@@ -76,12 +73,11 @@ void readSettingsFromJSON(File& file) {
       continue;
     }
     uint8_t nodeIdA = bleSwitchConfig["nodeIdA"];
-    if (!nodeIdA) {
+    uint8_t nodeIdB = bleSwitchConfig["nodeIdB"];
+    if (!nodeIdA && !nodeIdB) {
       log_w("No nodeId specified");
       continue;
     }
-    uint8_t nodeIdB = bleSwitchConfig["nodeIdB"];
-
     enocean_PTM215b.registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdB);
   }
   log_d("Added %d switch(es) from config", counter);

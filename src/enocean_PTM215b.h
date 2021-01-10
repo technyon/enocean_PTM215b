@@ -8,10 +8,21 @@
 
 #include "BLEDevice.h"
 #include "BLEAdvertisedDevice.h"
-#include "enocean_PTM215bConstants.h"
 #include "Arduino.h"
 #include <map>
 #include <vector>
+
+// #define DEBUG_DATA
+// #define DEBUG_COMMISSIONING_DATA
+// #define DEBUG_ENCRYPTION
+// #define DEBUG_REGISTER_CONFIG
+
+/** Manufacturer data */
+#define ENOCEAN_MANUFACTURER_ID 0x03DA
+#define PMT215B_STATIC_SOURCE_ADDRESS_FIRST_BYTE 0xE2
+#define PMT215B_STATIC_SOURCE_ADDRESS_SECOND_BYTE 0x15
+
+#define LONG_PRESS_INTERVAL_MS          1000
 
 namespace PTM215b {
 
@@ -19,10 +30,14 @@ enum class Direction {
   Up, Down
 };
 
-enum class EventType {
+enum class ActionType {
   Pushed,
-  Repeat,
   Released
+};
+
+enum class EventType {
+  PushedLong,
+  PushedShort
 };
 
 struct BleSwitch {
@@ -32,11 +47,17 @@ struct BleSwitch {
   uint8_t nodeIdB;
 };
 
+struct BleSwitchAction {
+  uint8_t nodeId;
+  Direction direction;
+  ActionType actionType;
+  uint32_t pushStartTime = 0;
+};
+
 struct BleSwitchEvent {
   uint8_t nodeId;
   Direction direction;
   EventType eventType;
-  uint32_t pushStartTime;
 };
 
 class Eventhandler {
@@ -109,7 +130,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
      * @brief Map of Last events by NodeId
      * 
      */
-    std::map<uint8_t, BleSwitchEvent> events;
+    std::map<uint8_t, BleSwitchAction> actions;
 
     /**
     * @brief Create queue and start BLE scan task and switch handling task for detecting long press
