@@ -32,7 +32,7 @@ void bleScanTask(void * pvParameters) {
 	log_d("TASK: BLE scan task started");
 	Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
   BLEScan* pBLEScan;
-  BLEScanResults foundDevices;
+  // BLEScanResults foundDevices;
   pBLEScan = BLEDevice::getScan(); //create new scan
   pBLEScan->setAdvertisedDeviceCallbacks(enocean_PTM215bObj, true); //want duplicates as we will not be connecting and only listening to adv data
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
