@@ -130,7 +130,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
 
     struct Switch {
       uint32_t lastSequenceCounter = 0;
-      char securityKey[16] = {0};
+      uint8_t securityKey[16] = {0};
       uint8_t nodeIdA0;
       uint8_t nodeIdA1;
       uint8_t nodeIdB0;
@@ -213,15 +213,6 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     */
     // void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
     void handleSwitchAction(const uint8_t switchStatus, const std::string bleAddress);
- 
-    /**
-    * @brief Convert std::string holding 1 byte (2chars) hex data 
-    * 
-    * @param stringInput input string with 32 chars (16 bytes) of hex data
-    * @param charArrayOutput reference to char array where to store converted data
-    * @param byteLength length of charArrayOutput
-    */
-    void hexStringToCharArray(std::string stringInput, char * charArrayOutput, uint8_t byteLength);
 
 };
 

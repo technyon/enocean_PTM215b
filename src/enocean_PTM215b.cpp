@@ -6,28 +6,9 @@
  */
 
 #include "enocean_PTM215b.h"
+#include "enocean_utils.h"
 #include "mbedtls/aes.h"
 namespace PTM215b {
-
-void printBuffer(const byte* buff, const uint8_t size, const boolean asChars, const char* header) {
-  delay(100); //delay otherwise first part of print will not be shown 
-  char tmp[4];
-  
-  if (strlen(header) > 0) {
-    Serial.print(header);
-    Serial.print(": ");
-  }
-  for (int i = 0; i < size; i++) {
-    if (asChars) {
-      Serial.print((char)buff[i]);
-    } else {
-      sprintf(tmp, "%02x", buff[i]);
-      Serial.print(tmp);
-      Serial.print(" ");
-    }
-  }
-  Serial.println();
-}
 
 void bleScanTask(void * pvParameters) {
 	log_d("TASK: PTM215b BLE scan task started");
@@ -195,7 +176,7 @@ bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
   mbedtls_aes_context aes;
   mbedtls_aes_init( &aes );
 
-  mbedtls_aes_setkey_enc( &aes, (const unsigned char*) switches[bleAddress].securityKey, strlen(switches[bleAddress].securityKey) * 8 );
+  mbedtls_aes_setkey_enc( &aes, (const unsigned char*) switches[bleAddress].securityKey, sizeof(switches[bleAddress].securityKey) * 8 );
   
   //calculate X1 from B0
   mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)b0, x1);
@@ -253,13 +234,6 @@ void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
     printBuffer((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false, "PayloadOptionalData");
     log_d("## END commissioning payload ##");
   #endif
-}
-
-std::string str_tolower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), 
-                   [](unsigned char c){ return std::tolower(c); }
-                  );
-    return s;
 }
 
 void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB){
@@ -379,10 +353,5 @@ void Enocean_PTM215b::generateRepeatEvents() {
   }
 }
 
-void Enocean_PTM215b::hexStringToCharArray(std::string stringInput, char * charArrayOutput, uint8_t byteLength) {
-  for(int i = 0; i < byteLength; i++){
-    charArrayOutput[i] = strtol(stringInput.substr(i*2,2).c_str(), NULL, 16);
-  }
-}
 
 } // namespace
