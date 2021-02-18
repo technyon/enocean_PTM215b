@@ -55,7 +55,7 @@ void repeatEventsTask(void * pvParameters) {
 	Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
   
 	while (1){
-    delay(500);
+    delay(REPEAT_INTERVAL);
     enocean_PTM215bObj->generateRepeatEvents();
   }
 }
@@ -99,7 +99,7 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
       //Check if data (13 bytes) or commissioning (30) payload
       //TODO: make option to also read optional data when required, then data payload can be 13-17 bytes
       if(payloadLen == 13 ){
-        memcpy(&dataPayloadBuffer, advertisedDevice.getPayload(), payloadLen+1);
+        memcpy(&dataPayloadBuffer, advertisedDevice.getPayload(), payloadLen);
         handleDataPayload(serverBleAddressObj.toString());
       } else if(payloadLen == 30){
         memcpy(&commissioningPayloadBuffer, advertisedDevice.getPayload(), payloadLen+1);
@@ -219,7 +219,7 @@ bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
 
   #ifdef DEBUG_ENCRYPTION
     log_d("## START encryption data ##");
-    printBuffer((byte*)bleSwitches[bleAddress].securityKey, 16, false, "sec key");
+    printBuffer((byte*)switches[bleAddress].securityKey, 16, false, "sec key");
     printBuffer((byte*)nonce, sizeof(nonce), false, "Nonce:");
     printBuffer((byte*)a0, sizeof(a0), false, "A0   :");
     printBuffer((byte*)b0, sizeof(b0), false, "B0   :");
@@ -331,9 +331,9 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::
   // TODO Allow for simultaneous Directions, possible with a 4-button PTM
   Direction direction;
   if (switchStatus & 0b00001010) {
-     direction = Direction::Down;
+     direction = Direction::Up;
   } else if (switchStatus & 0b00010100) {
-    direction = Direction::Up;
+    direction = Direction::Down;
   } else {
     log_e("No valid Direction in switchStatus [0x%02X]", switchStatus);
     return;
@@ -351,7 +351,7 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::
   event.direction = direction;
   
   if (type == ActionType::Release) {
-    if (millis() - LONG_PRESS_INTERVAL_MS < actions[nodeId].pushStartTime ){
+    if (millis() - INITIAL_REPEAT_WAIT < actions[nodeId].pushStartTime ){
       event.eventType = EventType::ReleaseShort;
     } else {
       event.eventType = EventType::ReleaseLong;
@@ -361,13 +361,15 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::
   } else {
     action.pushStartTime = millis();
     actions[nodeId] = action;
+    event.eventType = EventType::Pushed;
+    eventHandler.handleEvent(event);
   }
 }
 
 void Enocean_PTM215b::generateRepeatEvents() {
   for (auto const& pair : actions) {
     SwitchAction action = pair.second;
-    if (millis() - LONG_PRESS_INTERVAL_MS > action.pushStartTime ) {
+    if (millis() - INITIAL_REPEAT_WAIT > action.pushStartTime ) {
       SwitchEvent event;
       event.nodeId = action.nodeId;
       event.direction = action.direction;

@@ -13,14 +13,15 @@
 #include <map>
 #include <vector>
 
-#define DEBUG_DATA
-#define DEBUG_COMMISSIONING_DATA
+// #define DEBUG_DATA
+// #define DEBUG_COMMISSIONING_DATA
 // #define DEBUG_ENCRYPTION
-#define DEBUG_REGISTER_CONFIG
+// #define DEBUG_REGISTER_CONFIG
 
 
 // TODO Make configurable
-#define LONG_PRESS_INTERVAL_MS          500
+#define INITIAL_REPEAT_WAIT            1000 
+#define REPEAT_INTERVAL                 500
 
 namespace PTM215b {
 
@@ -31,12 +32,20 @@ enum class EventType {
   ReleaseLong
 };
 
+/**
+ * @brief Up or Down button pressed / released
+ * 
+ */
 enum class Direction {
   Down ,
   Up
 };
 
 
+/**
+ * @brief Event send to registered eventhandler
+ * 
+ */
 struct SwitchEvent {
   uint8_t nodeId;
   Direction direction;
@@ -120,7 +129,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     };
 
     struct Switch {
-      uint32_t lastSequenceCounter;
+      uint32_t lastSequenceCounter = 0;
       char securityKey[16] = {0};
       uint8_t nodeIdA0;
       uint8_t nodeIdA1;

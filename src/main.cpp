@@ -20,7 +20,7 @@ public:
       std::string type;
       switch (evt.eventType) {
       case PTM215b::EventType::Pushed:
-        type = "Pushed Long";
+        type = "Pushed";
         break;
       case PTM215b::EventType::ReleaseLong:
         type = "Release Long";
