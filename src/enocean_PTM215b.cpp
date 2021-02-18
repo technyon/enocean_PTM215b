@@ -7,7 +7,6 @@
 
 #include "enocean_PTM215b.h"
 #include "mbedtls/aes.h"
-
 namespace PTM215b {
 
 void printBuffer(const byte* buff, const uint8_t size, const boolean asChars, const char* header) {
@@ -45,7 +44,7 @@ void bleScanTask(void * pvParameters) {
       pBLEScan->start(10,true);
       pBLEScan->clearResults();
     } else {
-      log_w("No switches registered");
+      log_w("No switches registered, waiting 5 sec...");
       delay(5000);
     }
   }
@@ -61,7 +60,7 @@ void repeatEventsTask(void * pvParameters) {
   }
 }
 
-Enocean_PTM215b::Enocean_PTM215b(Eventhandler& handler) : eventHandler(handler) {
+Enocean_PTM215b::Enocean_PTM215b(Eventhandler& handler, const boolean enableRepeatTask) : eventHandler(handler), enableRepeatTask(enableRepeatTask) {
 }
 
 Enocean_PTM215b::~Enocean_PTM215b(){
@@ -80,8 +79,10 @@ void Enocean_PTM215b::initialize() {
 
 
 void Enocean_PTM215b::startTasks(){
-  xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, 1);
   xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, 1);
+  if (enableRepeatTask) {
+    xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, 1);
+  }
 }
 
 void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -113,14 +114,13 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
 }
 
 void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
-  if (bleSwitches.count(bleAddress) == 0) {
-    log_w("Unknown address %s", bleAddress);
+  if (switches.count(bleAddress) == 0) {
+    log_w("Unknown address [%s]", bleAddress.c_str());
     return;
   }
 
   //ignore double/triple messages as switch always sends three messages per action
-  // log_d("lastsequence: %d, received sequence: %d", bleSwitches[bleAddress].lastSequenceCounter, dataPayloadBuffer.sequenceCounter);
-  if (bleSwitches[bleAddress].lastSequenceCounter < dataPayloadBuffer.sequenceCounter){
+  if (switches[bleAddress].lastSequenceCounter < dataPayloadBuffer.sequenceCounter){
     #ifdef DEBUG_DATA
       log_d("## Stored data payload ##");
       log_d("BLE address: %s", bleAddress.c_str());
@@ -136,7 +136,7 @@ void Enocean_PTM215b::handleDataPayload(std::string bleAddress) {
 
     if (securityKeyValid(bleAddress)){
       //save last sequence nr
-      bleSwitches[bleAddress].lastSequenceCounter = dataPayloadBuffer.sequenceCounter;
+      switches[bleAddress].lastSequenceCounter = dataPayloadBuffer.sequenceCounter;
       handleSwitchAction(dataPayloadBuffer.switchStatus, bleAddress);
     }
   }
@@ -195,7 +195,7 @@ bool Enocean_PTM215b::securityKeyValid(std::string bleAddress){
   mbedtls_aes_context aes;
   mbedtls_aes_init( &aes );
 
-  mbedtls_aes_setkey_enc( &aes, (const unsigned char*) bleSwitches[bleAddress].securityKey, strlen(bleSwitches[bleAddress].securityKey) * 8 );
+  mbedtls_aes_setkey_enc( &aes, (const unsigned char*) switches[bleAddress].securityKey, strlen(switches[bleAddress].securityKey) * 8 );
   
   //calculate X1 from B0
   mbedtls_aes_crypt_ecb( &aes, MBEDTLS_AES_ENCRYPT, (const unsigned char*)b0, x1);
@@ -255,90 +255,109 @@ void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
   #endif
 }
 
+std::string str_tolower(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), 
+                   [](unsigned char c){ return std::tolower(c); }
+                  );
+    return s;
+}
+
 void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB){
-  BleSwitch bleSwitch;
+  Switch bleSwitch;
   hexStringToCharArray(securityKey, bleSwitch.securityKey, 16);
-  bleSwitch.nodeIdA = nodeIdA;
-  bleSwitch.nodeIdB = nodeIdB;
-  bleSwitches.insert(std::pair<std::string, BleSwitch>(bleAddress, bleSwitch));
+  bleSwitch.nodeIdA0 = nodeIdA;
+  bleSwitch.nodeIdA1 = nodeIdA;
+  bleSwitch.nodeIdB0 = nodeIdB;
+  bleSwitch.nodeIdB1 = nodeIdB;
+  switches.insert(std::pair<std::string, Switch>(str_tolower(bleAddress), bleSwitch));
 
   #ifdef DEBUG_REGISTER_CONFIG
     log_d("## START Register BLE switch ##");
-    log_d("BLE address: %s", bleAddress.c_str());
+    log_d("BLE address: %s", str_tolower(bleAddress).c_str());
     printBuffer((byte*)bleSwitch.securityKey, strlen(bleSwitch.securityKey), false, "Security key");
-    log_d("NodeA id: %d", bleSwitch.nodeIdA);
-    log_d("NodeB id: %d", bleSwitch.nodeIdB);
+    log_d("NodeA id: %d", bleSwitch.nodeIdA0);
+    log_d("NodeB id: %d", bleSwitch.nodeIdB0);
+    log_d("## END Register BLE switch ##");
+  #endif
+}
+
+void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA0, const uint8_t nodeIdA1, 
+                                        const uint8_t nodeIdB0, const uint8_t nodeIdB1){
+  Switch bleSwitch;
+  hexStringToCharArray(securityKey, bleSwitch.securityKey, 16);
+  bleSwitch.nodeIdA0 = nodeIdA0;
+  bleSwitch.nodeIdA1 = nodeIdA1;
+  bleSwitch.nodeIdB0 = nodeIdB0;
+  bleSwitch.nodeIdB1 = nodeIdB1;
+  switches.insert(std::pair<std::string, Switch>(str_tolower(bleAddress), bleSwitch));
+
+  #ifdef DEBUG_REGISTER_CONFIG
+    log_d("## START Register BLE switch ##");
+    log_d("BLE address: %s", str_tolower(bleAddress).c_str());
+    printBuffer((byte*)bleSwitch.securityKey, strlen(bleSwitch.securityKey), false, "Security key");
+    log_d("NodeA0 id: %d", bleSwitch.nodeIdA0);
+    log_d("NodeA1 id: %d", bleSwitch.nodeIdA1);
+    log_d("NodeB0 id: %d", bleSwitch.nodeIdB0);
+    log_d("NodeB1 id: %d", bleSwitch.nodeIdB1);
     log_d("## END Register BLE switch ##");
   #endif
 }
 
 void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::string bleAddress){
   log_v("handling button action: %d from %s", switchStatus, bleAddress.c_str());
-  if (bleSwitches.count(bleAddress) == 0) {
-    log_w("No switch registered for address %d", bleAddress.c_str());
+  if (switches.count(bleAddress) == 0) {
+    log_w("No switch registered for address [%d]", bleAddress.c_str());
     return;
   }
 
-  BleSwitch bleSwitch = bleSwitches[bleAddress];
+  Switch bleSwitch = switches[bleAddress];
 
   // TODO Allow for simultaneous events on A and B
+
   uint8_t nodeId;
-  // if (switchStatus && 0b000000110) {
-  //   nodeId = bleSwitch.nodeIdA;
-  // } else if (switchStatus && 0b000011000) {
-  //   nodeId = bleSwitch.nodeIdB;
-  // } else {
-  //   log_e("Invalid switchStatus 0x%02X", switchStatus);
-  //   return;
-  // }
-  if(switchStatus == 3 || switchStatus == 2 || switchStatus == 5 || switchStatus == 4){
-    nodeId = bleSwitch.nodeIdA;
-  }else{
-    nodeId = bleSwitch.nodeIdB;
+  if (switchStatus & 0b00000010) {
+     nodeId = bleSwitch.nodeIdA0;
+  } else if (switchStatus & 0b00000100) {
+    nodeId = bleSwitch.nodeIdA1;
+  } else if (switchStatus & 0b00001000) {
+    nodeId = bleSwitch.nodeIdB0;
+  } else if (switchStatus & 0b00010000) {
+    nodeId = bleSwitch.nodeIdB1;
+  } else {
+    log_e("Invalid switchStatus [0x%02X]", switchStatus);
+    return;
   }
 
-  // TODO Allow for simultaneous Directions, you cannot push up and down simultaniously?????
+  // TODO Allow for simultaneous Directions, possible with a 4-button PTM
   Direction direction;
-  // if (switchStatus && 0b000001010) {
-  //   direction = Direction::Up;
-  // } else if (switchStatus && 0b000010100) {
-  //   direction = Direction::Down;
-  // } else {
-  //   log_e("No buttons specified");
-  //   return;
-  // }
-  if(switchStatus == 3 || switchStatus == 2 || switchStatus == 9 || switchStatus == 8){
+  if (switchStatus & 0b00001010) {
+     direction = Direction::Down;
+  } else if (switchStatus & 0b00010100) {
     direction = Direction::Up;
-  }else{
-    direction = Direction::Down;
+  } else {
+    log_e("No valid Direction in switchStatus [0x%02X]", switchStatus);
+    return;
   }
 
-  // ActionType type = (switchStatus && 0x01) ? ActionType::Pushed : ActionType::Released;
+  ActionType type = (ActionType)(switchStatus & 0x01);
 
-  ActionType type;
-  if(switchStatus == 3 || switchStatus == 5 || switchStatus == 9 || switchStatus == 17){
-    type = ActionType::Pushed;
-  }else{
-    type = ActionType::Released;
-  }
-
-  BleSwitchAction action;
+  SwitchAction action;
   action.nodeId = nodeId;
   action.actionType = type;
   action.direction = direction;
 
-  BleSwitchEvent event;
+  SwitchEvent event;
   event.nodeId = nodeId;
   event.direction = direction;
   
-  if (type == ActionType::Released) {
-    if(millis() - LONG_PRESS_INTERVAL_MS < actions[nodeId].pushStartTime ){
-      event.eventType = EventType::PushedShort;
-      eventHandler.handleEvent(event);
-      actions.erase(nodeId);
-    }else{
-      actions.erase(nodeId);
+  if (type == ActionType::Release) {
+    if (millis() - LONG_PRESS_INTERVAL_MS < actions[nodeId].pushStartTime ){
+      event.eventType = EventType::ReleaseShort;
+    } else {
+      event.eventType = EventType::ReleaseLong;
     }
+    eventHandler.handleEvent(event);
+    actions.erase(nodeId);
   } else {
     action.pushStartTime = millis();
     actions[nodeId] = action;
@@ -347,14 +366,14 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, const std::
 
 void Enocean_PTM215b::generateRepeatEvents() {
   for (auto const& pair : actions) {
-    BleSwitchAction action = pair.second;
+    SwitchAction action = pair.second;
     if (millis() - LONG_PRESS_INTERVAL_MS > action.pushStartTime ) {
-          BleSwitchEvent event;
-          event.nodeId = action.nodeId;
-          event.direction = action.direction;
-          event.eventType = EventType::PushedLong;
-          eventHandler.handleEvent(event);
-        }
+      SwitchEvent event;
+      event.nodeId = action.nodeId;
+      event.direction = action.direction;
+      event.eventType = EventType::Repeat;
+      eventHandler.handleEvent(event);
+    }
   }
 }
 

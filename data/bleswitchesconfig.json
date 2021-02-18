@@ -1,10 +1,16 @@
 {
   "bleSwitchesConfig" : [
     {
-      "bleAddress": "e2:15:00:01:72:f9",
+      "bleAddress": "E2:15:00:01:72:F9",
       "securityKey": "1CB95CE63F19ADC7E0FB92DA56D69219",
       "nodeIdA": 0,
       "nodeIdB": 1
+    },
+    {
+      "bleAddress": "E2:15:00:00:D4:AD",
+      "securityKey": "8B49C1B3C62DAE598DCFD4C1AFB1956A",
+      "nodeIdA": 10,
+      "nodeIdB": 11
     }
   ]
 }

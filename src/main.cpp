@@ -15,15 +15,21 @@ public:
     EH() {};
     virtual ~EH() {};
 
-    void handleEvent(PTM215b::BleSwitchEvent& evt) override {
+    void handleEvent(PTM215b::SwitchEvent& evt) override {
 
       std::string type;
       switch (evt.eventType) {
-      case PTM215b::EventType::PushedLong:
+      case PTM215b::EventType::Pushed:
         type = "Pushed Long";
         break;
-      case PTM215b::EventType::PushedShort:
-        type = "Pushed Short";
+      case PTM215b::EventType::ReleaseLong:
+        type = "Release Long";
+        break;
+      case PTM215b::EventType::ReleaseShort:
+        type = "Release Short";
+        break;
+      case PTM215b::EventType::Repeat:
+        type = "Repeat";
         break;
       
       default:
@@ -32,13 +38,13 @@ public:
 
       std::string direction = (evt.direction == PTM215b::Direction::Up) ? "Up" : "Down";
 
-      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s", evt.nodeId, type.c_str(), direction.c_str());
+      log_d("BleSwitchEvent Received: Node Id: [%d], Type: [%s], Direction: [%s]", evt.nodeId, type.c_str(), direction.c_str());
     };
 
 };
 
 EH handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(handler);
+PTM215b::Enocean_PTM215b enocean_PTM215b(handler, true);
 
 DynamicJsonDocument readConfigFile(File& file) {
   file.seek(0);
@@ -88,7 +94,7 @@ void setup(){
   Serial.begin(115200);
   log_d("Starting Enocean_PTM215b BLE Client application...");
     
-  BLEDevice::init("ESP32_client");
+  BLEDevice::init("PTM215b_client");
   enocean_PTM215b.initialize();
 
   SPIFFS.begin();

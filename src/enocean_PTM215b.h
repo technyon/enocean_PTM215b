@@ -6,55 +6,38 @@
  *      Author: Jeroen
  */
 
+#include "enocean_Constants.h"
 #include "BLEDevice.h"
 #include "BLEAdvertisedDevice.h"
 #include "Arduino.h"
 #include <map>
 #include <vector>
 
-// #define DEBUG_DATA
-// #define DEBUG_COMMISSIONING_DATA
+#define DEBUG_DATA
+#define DEBUG_COMMISSIONING_DATA
 // #define DEBUG_ENCRYPTION
-// #define DEBUG_REGISTER_CONFIG
+#define DEBUG_REGISTER_CONFIG
 
-/** Manufacturer data */
-#define ENOCEAN_MANUFACTURER_ID 0x03DA
-#define PMT215B_STATIC_SOURCE_ADDRESS_FIRST_BYTE 0xE2
-#define PMT215B_STATIC_SOURCE_ADDRESS_SECOND_BYTE 0x15
 
-#define LONG_PRESS_INTERVAL_MS          1000
+// TODO Make configurable
+#define LONG_PRESS_INTERVAL_MS          500
 
 namespace PTM215b {
 
-enum class Direction {
-  Up, Down
-};
-
-enum class ActionType {
-  Pushed,
-  Released
-};
-
 enum class EventType {
-  PushedLong,
-  PushedShort
+  Pushed,
+  Repeat,
+  ReleaseShort,
+  ReleaseLong
 };
 
-struct BleSwitch {
-  uint32_t lastSequenceCounter;
-  char securityKey[16] = {0};
-  uint8_t nodeIdA;
-  uint8_t nodeIdB;
+enum class Direction {
+  Down ,
+  Up
 };
 
-struct BleSwitchAction {
-  uint8_t nodeId;
-  Direction direction;
-  ActionType actionType;
-  uint32_t pushStartTime = 0;
-};
 
-struct BleSwitchEvent {
+struct SwitchEvent {
   uint8_t nodeId;
   Direction direction;
   EventType eventType;
@@ -64,15 +47,22 @@ class Eventhandler {
 public:
     Eventhandler() {};
     virtual ~Eventhandler() {};
-
-    virtual void handleEvent(BleSwitchEvent& evt) = 0;
-
+    virtual void handleEvent(SwitchEvent& evt) = 0;
 };
 
-
+/**
+ * @brief Implementation of an Enocean PTM215b powerless BLE switch 
+ * 
+ * The class works by starting a background taks which will scan for BLE advertising events
+ * By deriving from BLEAdvertisedDeviceCallBack the class can be used in a ble scan task 
+ * which will call Enocean_PTM251b.onResult() method when a message is received
+ * 
+ * The constructor has a boolean flag `enableRepeatTask` with which a second task can be launched that will
+ * generate Repeat events every 500ms as long as a button is not released.
+ */
 class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
   public:
-    Enocean_PTM215b(Eventhandler& handler);
+    Enocean_PTM215b(Eventhandler& handler, const boolean enableRepeatTask);
     virtual ~Enocean_PTM215b();
 
     /**
@@ -83,15 +73,29 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     /**
     * @brief Register a switch
     * 
+    * It can either be used to register 2 rocker switches (A and B) or 4 pushbutton switches (A0, A1, B0, B1)
+    * 
     * @param bleAddress BLE address of switch being handled
     * @param securityKey Security key retreived from QR code, NFC or commissioning data 
     * @param nodeIdA Id of device that "belongs" to this switch A rocker (can be used in handleSwitchResult)
     * @param nodeIdB Id of device that "belongs" to this switch B rocker (can be used in handleSwitchResult)
     */
     void registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB);
+    void registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA0, const uint8_t nodeIdA1, 
+                           const uint8_t nodeIdB0, const uint8_t nodeIdB1);
 
+    /**
+     * @brief Method used by repeatEventstask to generate a repeat event every 500ms
+     * 
+     */
     void generateRepeatEvents();
-    uint8_t registeredSwitchCount() { return bleSwitches.size(); }
+    
+    /**
+     * @brief Returns the number of switches registered
+     * 
+     * @return uint8_t 
+     */
+    uint8_t registeredSwitchCount() { return switches.size(); }
     
   private:
     /** Contents of a payload telegram */
@@ -114,23 +118,45 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
         char securityKey[16] 		    = {0};
         char staticSourceAddress[6] = {0};
     };
+
+    struct Switch {
+      uint32_t lastSequenceCounter;
+      char securityKey[16] = {0};
+      uint8_t nodeIdA0;
+      uint8_t nodeIdA1;
+      uint8_t nodeIdB0;
+      uint8_t nodeIdB1;
+    };
+
+    enum class ActionType {
+      Release = 0,
+      Press = 1,
+    };    
     
-    TaskHandle_t repeatEventsTaskHandle;
-    TaskHandle_t bleScanTaskHandle;
+    struct SwitchAction {
+      uint8_t nodeId;
+      Direction direction;
+      ActionType actionType;
+      uint32_t pushStartTime = 0;
+    };
+    
     Eventhandler& eventHandler;
+    boolean enableRepeatTask;
+    TaskHandle_t repeatEventsTaskHandle = nullptr;
+    TaskHandle_t bleScanTaskHandle = nullptr;
     DataPayload dataPayloadBuffer;
     CommissioningPayload commissioningPayloadBuffer;
 
     /**
      * @brief Map of registered switches by BleAddress
      */
-    std::map<std::string, BleSwitch> bleSwitches;
+    std::map<std::string, Switch> switches;
 
     /**
      * @brief Map of Last events by NodeId
      * 
      */
-    std::map<uint8_t, BleSwitchAction> actions;
+    std::map<uint8_t, SwitchAction> actions;
 
     /**
     * @brief Create queue and start BLE scan task and switch handling task for detecting long press
@@ -178,8 +204,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     */
     // void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
     void handleSwitchAction(const uint8_t switchStatus, const std::string bleAddress);
-    
-  
+ 
     /**
     * @brief Convert std::string holding 1 byte (2chars) hex data 
     * 
