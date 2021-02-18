@@ -238,7 +238,7 @@ void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
 
 void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB){
   Switch bleSwitch;
-  hexStringToCharArray(securityKey, bleSwitch.securityKey, 16);
+  hexStringToByteArray(securityKey, bleSwitch.securityKey, 16);
   bleSwitch.nodeIdA0 = nodeIdA;
   bleSwitch.nodeIdA1 = nodeIdA;
   bleSwitch.nodeIdB0 = nodeIdB;
@@ -258,7 +258,7 @@ void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std:
 void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA0, const uint8_t nodeIdA1, 
                                         const uint8_t nodeIdB0, const uint8_t nodeIdB1){
   Switch bleSwitch;
-  hexStringToCharArray(securityKey, bleSwitch.securityKey, 16);
+  hexStringToByteArray(securityKey, bleSwitch.securityKey, 16);
   bleSwitch.nodeIdA0 = nodeIdA0;
   bleSwitch.nodeIdA1 = nodeIdA1;
   bleSwitch.nodeIdB0 = nodeIdB0;
