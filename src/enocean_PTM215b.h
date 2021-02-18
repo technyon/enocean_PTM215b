@@ -66,8 +66,12 @@ public:
  * By deriving from BLEAdvertisedDeviceCallBack the class can be used in a ble scan task 
  * which will call Enocean_PTM251b.onResult() method when a message is received
  * 
+ * On reception of an event from a registered switches the handleEvent() method of the event handler that is provided on construction will be called
+ * 
  * The constructor has a boolean flag `enableRepeatTask` with which a second task can be launched that will
  * generate Repeat events every 500ms as long as a button is not released.
+ * 
+ * Before calling initialize() to create and start the tasks, the global BLEDevice must have been initialized with BLEDevice::init()
  */
 class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
   public:
