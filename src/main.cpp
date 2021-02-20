@@ -1,14 +1,14 @@
 /**
  * A BLE client example to receive events from an Enocean PTM215b switch
  * 
- * NOTE: Don't forget to update the properties of your switch in data/bleswitchesconfig.json and flash the ESP32 filesystem with the data folder
  * 
  * author Jeroen
  */
 
 #include "enocean_PTM215b.h"
-#include "ArduinoJson.h"
-#include "SPIFFS.h"
+
+#define BLE_ADDRESS "E2:15:00:00:D4:AD"
+#define SECURITY_KEY "8B49C1B3C62DAE598DCFD4C1AFB1956A"
 
 class EH : public PTM215b::Eventhandler {
 public:
@@ -22,23 +22,24 @@ public:
       case PTM215b::EventType::Pushed:
         type = "Pushed";
         break;
-      case PTM215b::EventType::ReleaseLong:
-        type = "Release Long";
-        break;
-      case PTM215b::EventType::ReleaseShort:
-        type = "Release Short";
-        break;
       case PTM215b::EventType::Repeat:
         type = "Repeat";
         break;
+      case PTM215b::EventType::ReleaseLong:
+        type = "ReleasedLong";
+        break;
       
+      case PTM215b::EventType::ReleaseShort:
+        type = "ReleasedShort";
+        break;
+
       default:
         break;
       }
 
       std::string direction = (evt.direction == PTM215b::Direction::Up) ? "Up" : "Down";
 
-      log_d("BleSwitchEvent Received: Node Id: [%d], Type: [%s], Direction: [%s]", evt.nodeId, type.c_str(), direction.c_str());
+      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s", evt.nodeId, type.c_str(), direction.c_str());
     };
 
 };
@@ -46,64 +47,16 @@ public:
 EH handler;
 PTM215b::Enocean_PTM215b enocean_PTM215b(handler, true);
 
-DynamicJsonDocument readConfigFile(File& file) {
-  file.seek(0);
-  DynamicJsonDocument doc(8192);
-  DeserializationError error = deserializeJson(doc, file);
-  if (error) {
-    log_e("Couldn't parse JSON file [%s]: %s", file.name(), error.c_str());
-  }
-  return doc;
-}
-
-void readSettingsFromJSON(File& file) {
-  DynamicJsonDocument jsonDocument = readConfigFile(file);
-
-  if (jsonDocument.isNull()) {
-    log_e("ERROR reading config file");
-    return;
-  }
-  
-  uint8_t counter = 0;
-  JsonArray bleSwitchesConfig = jsonDocument["bleSwitchesConfig"];
-  for (JsonVariantConst bleSwitchConfig : bleSwitchesConfig) {
-    counter++;
-    std::string bleAddress = bleSwitchConfig["bleAddress"];
-    if (bleAddress == "") {
-      log_w("No bleAddress specified");
-      continue;
-    }
-    std::string securityKey = bleSwitchConfig["securityKey"];
-    if ((securityKey == "") || (securityKey.length() != 32)) {
-      log_w("Invalid securityKey specified");
-      continue;
-    }
-    uint8_t nodeIdA = bleSwitchConfig["nodeIdA"];
-    uint8_t nodeIdB = bleSwitchConfig["nodeIdB"];
-    if (!nodeIdA && !nodeIdB) {
-      log_w("No nodeId specified");
-      continue;
-    }
-    enocean_PTM215b.registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdB);
-  }
-  log_d("Added %d switch(es) from config", counter);
-}
-
-
 void setup(){
   Serial.begin(115200);
-  log_d("Starting Enocean_PTM215b BLE Client application...");
+  log_d("Starting Enocean_PTM215b BLE Example application...");
     
-  BLEDevice::init("PTM215b_client");
+  BLEDevice::init("ESP32_client");
   enocean_PTM215b.initialize();
 
-  SPIFFS.begin();
-  File file = SPIFFS.open("/bleswitchesconfig.json");
-  if (!file) {
-    log_e("Cannot open file [%s]", file.name());
-    return;
-  } 
-  readSettingsFromJSON(file);
+  log_d("Adding switch");
+  enocean_PTM215b.registerBleSwitch(BLE_ADDRESS, SECURITY_KEY, 10, 11);
+  log_d("Adding switch Done");
 
 }
 

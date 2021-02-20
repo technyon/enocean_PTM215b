@@ -17,7 +17,7 @@ public:
     EH() {};
     virtual ~EH() {};
 
-    void handleEvent(PTM215b::BleSwitchEvent& evt) override {
+    void handleEvent(PTM215b::SwitchEvent& evt) override {
 
       std::string type;
       switch (evt.eventType) {
@@ -27,23 +27,27 @@ public:
       case PTM215b::EventType::Repeat:
         type = "Repeat";
         break;
-      case PTM215b::EventType::Released:
-        type = "Released";
+      case PTM215b::EventType::ReleaseLong:
+        type = "ReleasedLong";
         break;
       
+      case PTM215b::EventType::ReleaseShort:
+        type = "ReleasedShort";
+        break;
+
       default:
         break;
       }
 
       std::string direction = (evt.direction == PTM215b::Direction::Up) ? "Up" : "Down";
 
-      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s, PushStartTime: %d", evt.nodeId, type.c_str(), direction.c_str(), evt.pushStartTime);
+      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s", evt.nodeId, type.c_str(), direction.c_str());
     };
 
 };
 
 EH handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(handler);
+PTM215b::Enocean_PTM215b enocean_PTM215b(handler,true);
 
 void setup(){
   Serial.begin(115200);

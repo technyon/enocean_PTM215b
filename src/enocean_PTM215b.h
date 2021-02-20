@@ -6,10 +6,10 @@
  *      Author: Jeroen
  */
 
+#include "Arduino.h"
 #include "enocean_Constants.h"
 #include "BLEDevice.h"
 #include "BLEAdvertisedDevice.h"
-#include "Arduino.h"
 #include <map>
 #include <vector>
 
@@ -157,13 +157,11 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     boolean enableRepeatTask;
     TaskHandle_t repeatEventsTaskHandle = nullptr;
     TaskHandle_t bleScanTaskHandle = nullptr;
-    DataPayload dataPayloadBuffer;
-    CommissioningPayload commissioningPayloadBuffer;
-
+    
     /**
      * @brief Map of registered switches by BleAddress
      */
-    std::map<std::string, Switch> switches;
+    std::map<BLEAddress, Switch> switches;
 
     /**
      * @brief Map of Last events by NodeId
@@ -192,21 +190,21 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     * 
     * @param advertisedDevice Holds BLE address and payload
     */
-    void handleDataPayload(std::string bleAddress);
+    void handleDataPayload(BLEAddress& bleAddress, DataPayload& payload);
     
     /**
     * @brief Handles commissioning data (to be implemented)
     * 
     * @param bleAddress BLE address of switch sending commissioning data
     */
-    void handleCommissioningPayload(std::string bleAddress);
+    // void handleCommissioningPayload(BLEAddress& bleAddress, CommissioningPayload& payload);
 
     /**
     * @brief Checks with AES128 encryption is sent security key is correct
     * 
     * @param bleAddress BLE address of switch being handled
     */
-    bool securityKeyValid(std::string bleAddress);
+    bool securityKeyValid(BLEAddress& bleAddress, DataPayload& payload);
 
     /**
     * @brief Handle final result of switch action
@@ -216,7 +214,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     * @param switchResult Was rocker pushed long or short
     */
     // void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
-    void handleSwitchAction(const uint8_t switchStatus, const std::string bleAddress);
+    void handleSwitchAction(const uint8_t switchStatus, BLEAddress& bleAddress);
 
 };
 
