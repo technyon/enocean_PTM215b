@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1",
+  "version": "1.0.0",
   "name": "EnOcean_PTM215b",
   "description": "Implementation of EnOcean PTM215b selfpowered BLE switches for Esp32",
   "keywords": "enocean PTM215b ble esp32",
