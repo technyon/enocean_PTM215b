@@ -15,7 +15,7 @@ Hardware supported:
 This library is work in progress but following features are working:
 * Register a PTM switch by BLE address (**"MAC Address"**), specifying a 32 character **Security Key** and seperate **NodeIds** for either rocker A and B
 or specify separate **NodeIds** for the four buttons A0, A1, B0 and B1
-* Task based detection of `Pressed`, `Repeat` and `Released` events
+* Task based detection of `Pressed`, `Repeat`, `ReleasedShort` and `ReleasedLong` events
 * Security checks on payload length, source address, GAP AD Type and security key encryption using AES128
 * Dispatch events received through BLE to external event handler
 * Dispatch `Repeat` events to external event handler every 1000ms, if button is pushed and held down
@@ -28,15 +28,15 @@ All classes are defined within the namespace `PTM215b`.
 ## Usage
 
 * Add dependency to `I-Connect/enocean_PTM215b` to your project
-* `#include "enocean_PMT215b.h"`
-* Define an Eventhandler class implementing the `PTM215b::Eventhandler` interface
+* Add `#include "enocean_PMT215b.h"`
 * Create an instance of the derived Eventhandler class
-* Create an instance of the `Enocean_PTM215b` class, providing the Eventhandler instance as constructor parameter
+* Create an instance of the `Enocean_PTM215b` class
 * Initialize BLEDevice
-* Register switches with `BLEAddress`, 32 character `SecurityKey` and **NodeIds**
+* Define an Eventhandler class implementing the `PTM215b::Eventhandler` interface
+* Register switches with `BLEAddress`, 32 character `SecurityKey`, **NodeIds** and a pointer to the eventhandler
 * Call `enocean_PTM215b::initialize()`
 
-On every switch event, a call will be made to `EventHandler.handleEvent()` with a `PTM215b::SwitchEvent` as parameter.
+On every switch event, a call will be made to the `handleEvent()` method of the eventHandler registered with the switch with a `PTM215b::SwitchEvent` as parameter.
 
     struct SwitchEvent {
       uint8_t nodeId;         // Id used when registering the switch

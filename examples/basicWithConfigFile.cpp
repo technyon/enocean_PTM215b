@@ -44,7 +44,7 @@ public:
 };
 
 EH handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(handler, true);
+PTM215b::Enocean_PTM215b enocean_PTM215b(true);
 
 DynamicJsonDocument readConfigFile(File& file) {
   file.seek(0);
@@ -84,7 +84,7 @@ void readSettingsFromJSON(File& file) {
       log_w("No nodeId specified");
       continue;
     }
-    enocean_PTM215b.registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdB);
+    enocean_PTM215b.registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdB, &handler);
   }
   log_d("Added %d switch(es) from config", counter);
 }

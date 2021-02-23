@@ -60,13 +60,14 @@ public:
 };
 
 /**
- * @brief Implementation of an Enocean PTM215b powerless BLE switch 
+ * @brief Class handling BLE advertisement messages received from multiple Enocean BLE215b devices
  * 
  * The class works by starting a background taks which will scan for BLE advertising events
  * By deriving from BLEAdvertisedDeviceCallBack the class can be used in a ble scan task 
  * which will call Enocean_PTM251b.onResult() method when a message is received
  * 
- * On reception of an event from a registered switches the handleEvent() method of the event handler that is provided on construction will be called
+ * PTM15B switches need to be registered to this class using registerBleSwitch, which links the BLE address to a event handler which
+ * will be called on reception of an event on that BLE address
  * 
  * The constructor has a boolean flag `enableRepeatTask` with which a second task can be launched that will
  * generate Repeat events every 500ms as long as a button is not released.
@@ -75,13 +76,16 @@ public:
  */
 class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
   public:
-    Enocean_PTM215b(Eventhandler& handler, const boolean enableRepeatTask);
+    Enocean_PTM215b(const boolean enableRepeatTask);
     virtual ~Enocean_PTM215b();
 
     /**
-    * @brief Initialize object, init BLE and spiffs, open and read config file, start tasks
+    * @brief Initialize object and start background tasks
+    * 
+    * The BLEDevice must have been initialized, otherwise an error will be logged and the background will not be started
+    * This must be called before using the switches
     */
-    virtual void initialize();
+    void initialize();
 
     /**
     * @brief Register a switch
@@ -92,13 +96,14 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     * @param securityKey Security key retreived from QR code, NFC or commissioning data 
     * @param nodeIdA Id of device that "belongs" to this switch A rocker (can be used in handleSwitchResult)
     * @param nodeIdB Id of device that "belongs" to this switch B rocker (can be used in handleSwitchResult)
+    * @param handler Pointer to an EventHandler that will be called on reception of events from this switch
     */
-    void registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB);
+    void registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB, Eventhandler* handler);
     void registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA0, const uint8_t nodeIdA1, 
-                           const uint8_t nodeIdB0, const uint8_t nodeIdB1);
+                           const uint8_t nodeIdB0, const uint8_t nodeIdB1, Eventhandler* handler);
 
     /**
-     * @brief Method used by repeatEventstask to generate a repeat event every 500ms
+     * @brief Method used by repeatEventstask to generate a repeat event every XXX ms
      * 
      */
     void generateRepeatEvents();
@@ -139,6 +144,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
       uint8_t nodeIdA1;
       uint8_t nodeIdB0;
       uint8_t nodeIdB1;
+      Eventhandler* eventHandler;
     };
 
     enum class ActionType {
@@ -151,9 +157,9 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
       Direction direction;
       ActionType actionType;
       uint32_t pushStartTime = 0;
+      Eventhandler* eventHandler;
     };
     
-    Eventhandler& eventHandler;
     boolean enableRepeatTask;
     TaskHandle_t repeatEventsTaskHandle = nullptr;
     TaskHandle_t bleScanTaskHandle = nullptr;
@@ -209,9 +215,8 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     /**
     * @brief Handle final result of switch action
     * 
+    * @param switchStatus Was rocker pushed long or short
     * @param bleAddress BLE address of the switch
-    * @param rocker Was rocker A0, A1, B0 or B1 pushed
-    * @param switchResult Was rocker pushed long or short
     */
     // void handleSwitchResult(std::string bleAddress, uint8_t rocker, uint8_t switchResult);
     void handleSwitchAction(const uint8_t switchStatus, BLEAddress& bleAddress);

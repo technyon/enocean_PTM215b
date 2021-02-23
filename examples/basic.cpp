@@ -47,7 +47,7 @@ public:
 };
 
 EH handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(handler,true);
+PTM215b::Enocean_PTM215b enocean_PTM215b(true);
 
 void setup(){
   Serial.begin(115200);
@@ -56,7 +56,7 @@ void setup(){
   BLEDevice::init("ESP32_client");
   enocean_PTM215b.initialize();
 
-  enocean_PTM215b.registerBleSwitch(STRING(BLE_ADDRESS), STRING(SECURITY_KEY), 0, 1);
+  enocean_PTM215b.registerBleSwitch(STRING(BLE_ADDRESS), STRING(SECURITY_KEY), 0, 1, &handler);
 
 }
 

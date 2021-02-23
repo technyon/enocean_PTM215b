@@ -41,7 +41,7 @@ void repeatEventsTask(void * pvParameters) {
   }
 }
 
-Enocean_PTM215b::Enocean_PTM215b(Eventhandler& handler, const boolean enableRepeatTask) : eventHandler(handler), enableRepeatTask(enableRepeatTask) {
+Enocean_PTM215b::Enocean_PTM215b(const boolean enableRepeatTask) : enableRepeatTask(enableRepeatTask) {
 }
 
 Enocean_PTM215b::~Enocean_PTM215b(){
@@ -57,7 +57,6 @@ void Enocean_PTM215b::initialize() {
   }
   startTasks();
 }
-
 
 void Enocean_PTM215b::startTasks(){
   xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, 1);
@@ -225,23 +224,22 @@ bool Enocean_PTM215b::securityKeyValid(BLEAddress& bleAddress, DataPayload& payl
 //   #endif
 // }
 
-void Enocean_PTM215b::registerBleSwitch(std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB){
-  registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdA, nodeIdB, nodeIdB);
+void Enocean_PTM215b::registerBleSwitch(std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA, const uint8_t nodeIdB, Eventhandler* handler){
+  registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdA, nodeIdB, nodeIdB, handler);
 }
 
 void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std::string securityKey, const uint8_t nodeIdA0, const uint8_t nodeIdA1, 
-                                        const uint8_t nodeIdB0, const uint8_t nodeIdB1){
+                                        const uint8_t nodeIdB0, const uint8_t nodeIdB1, Eventhandler* handler){
   Switch bleSwitch;
-  hexStringToByteArray(securityKey, bleSwitch.securityKey, 16);
   bleSwitch.nodeIdA0 = nodeIdA0;
   bleSwitch.nodeIdA1 = nodeIdA1;
   bleSwitch.nodeIdB0 = nodeIdB0;
   bleSwitch.nodeIdB1 = nodeIdB1;
+  bleSwitch.eventHandler = handler;
+  hexStringToByteArray(securityKey, bleSwitch.securityKey, sizeof(bleSwitch.securityKey));
 
   BLEAddress address{bleAddress}; 
   switches[address] = bleSwitch;
-
-  BLEAddress a2{address.toString()};
 
   #ifdef DEBUG_REGISTER_CONFIG
     log_d("## START Register BLE switch ##");
@@ -297,6 +295,7 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress&
   action.nodeId = nodeId;
   action.actionType = type;
   action.direction = direction;
+  action.eventHandler = bleSwitch.eventHandler;
 
   SwitchEvent event;
   event.nodeId = nodeId;
@@ -308,13 +307,13 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress&
     } else {
       event.eventType = EventType::ReleaseLong;
     }
-    eventHandler.handleEvent(event);
+    bleSwitch.eventHandler->handleEvent(event);
     actions.erase(nodeId);
   } else {
     action.pushStartTime = millis();
     actions[nodeId] = action;
     event.eventType = EventType::Pushed;
-    eventHandler.handleEvent(event);
+    bleSwitch.eventHandler->handleEvent(event);
   }
 }
 
@@ -326,7 +325,7 @@ void Enocean_PTM215b::generateRepeatEvents() {
       event.nodeId = action.nodeId;
       event.direction = action.direction;
       event.eventType = EventType::Repeat;
-      eventHandler.handleEvent(event);
+      action.eventHandler->handleEvent(event);
     }
   }
 }

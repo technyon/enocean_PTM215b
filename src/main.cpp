@@ -45,7 +45,7 @@ public:
 };
 
 EH handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(handler, true);
+PTM215b::Enocean_PTM215b enocean_PTM215b(true);
 
 void setup(){
   Serial.begin(115200);
@@ -55,7 +55,7 @@ void setup(){
   enocean_PTM215b.initialize();
 
   log_d("Adding switch");
-  enocean_PTM215b.registerBleSwitch(BLE_ADDRESS, SECURITY_KEY, 10, 11);
+  enocean_PTM215b.registerBleSwitch(BLE_ADDRESS, SECURITY_KEY, 10, 11, &handler);
   log_d("Adding switch Done");
 
 }
