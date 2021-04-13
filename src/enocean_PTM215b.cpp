@@ -103,10 +103,10 @@ void Enocean_PTM215b::handleDataPayload(BLEAddress& bleAddress, DataPayload& pay
     #ifdef DEBUG_DATA
       log_d("## Stored data payload ##");
       log_d("BLE address: %s", bleAddress.toString().c_str());
-      printBuffer((byte*)payload.manufacturerId, 2, false, "PayloadManufacturerId");
+      printBuf((byte*)payload.manufacturerId, 2, false, "PayloadManufacturerId");
       log_d("PayloadseqCounter: %d", payload.sequenceCounter);
       log_d("PayloadSwitchStatus: %d", payload.switchStatus);
-      printBuffer((byte*)payload.receivedSecurityKey, 4, false, "PayloadsecurityKey");
+      printBuf((byte*)payload.receivedSecurityKey, 4, false, "PayloadsecurityKey");
       log_d("## END data payload ##");
     #endif
 
@@ -189,16 +189,16 @@ bool Enocean_PTM215b::securityKeyValid(BLEAddress& bleAddress, DataPayload& payl
 
   #ifdef DEBUG_ENCRYPTION
     log_d("## START encryption data ##");
-    printBuffer((byte*)switches[bleAddress].securityKey, 16, false, "sec key");
-    printBuffer((byte*)nonce, sizeof(nonce), false, "Nonce:");
-    printBuffer((byte*)a0, sizeof(a0), false, "A0   :");
-    printBuffer((byte*)b0, sizeof(b0), false, "B0   :");
-    printBuffer((byte*)b1, sizeof(b1), false, "B1   :");
-    printBuffer((byte*)x1, sizeof(x1), false, "X1   :");
-    printBuffer((byte*)x1a, sizeof(x1a), false, "X1A  :");
-    printBuffer((byte*)x2, sizeof(x2), false, "X2   :");
-    printBuffer((byte*)s0, sizeof(s0), false, "S2   :");
-    printBuffer((byte*)t0, sizeof(t0), false, "T0   :");
+    printBuf((byte*)switches[bleAddress].securityKey, 16, false, "sec key");
+    printBuf((byte*)nonce, sizeof(nonce), false, "Nonce:");
+    printBuf((byte*)a0, sizeof(a0), false, "A0   :");
+    printBuf((byte*)b0, sizeof(b0), false, "B0   :");
+    printBuf((byte*)b1, sizeof(b1), false, "B1   :");
+    printBuf((byte*)x1, sizeof(x1), false, "X1   :");
+    printBuf((byte*)x1a, sizeof(x1a), false, "X1A  :");
+    printBuf((byte*)x2, sizeof(x2), false, "X2   :");
+    printBuf((byte*)s0, sizeof(s0), false, "S2   :");
+    printBuf((byte*)t0, sizeof(t0), false, "T0   :");
     log_d("## END encryption data ##");
   #endif
 
@@ -216,10 +216,10 @@ bool Enocean_PTM215b::securityKeyValid(BLEAddress& bleAddress, DataPayload& payl
 //     log_d("BLE address: %s", bleAddress.c_str());
 //     log_d("PayloadLen: %d", dataPayloadBuffer.len);
 //     log_d("PayloadLen: %x", dataPayloadBuffer.type);
-//     printBuffer((byte*)commissioningPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
+//     printBuf((byte*)commissioningPayloadBuffer.manufacturerId, 2, false, "PayloadManufacturerId");
 //     log_d("PayloadseqCounter: %d", commissioningPayloadBuffer.sequenceCounter);
-//     printBuffer((byte*)commissioningPayloadBuffer.securityKey, 16, false, "securitykey");
-//     printBuffer((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false, "PayloadOptionalData");
+//     printBuf((byte*)commissioningPayloadBuffer.securityKey, 16, false, "securitykey");
+//     printBuf((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false, "PayloadOptionalData");
 //     log_d("## END commissioning payload ##");
 //   #endif
 // }
@@ -244,7 +244,7 @@ void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std:
   #ifdef DEBUG_REGISTER_CONFIG
     log_d("## START Register BLE switch ##");
     log_d("BLE address: %s", str_tolower(bleAddress).c_str());
-    printBuffer((byte*)bleSwitch.securityKey, sizeof(bleSwitch.securityKey), false, "Security key");
+    printBuf((byte*)bleSwitch.securityKey, sizeof(bleSwitch.securityKey), false, "Security key");
     log_d("NodeA0 id: %d", bleSwitch.nodeIdA0);
     log_d("NodeA1 id: %d", bleSwitch.nodeIdA1);
     log_d("NodeB0 id: %d", bleSwitch.nodeIdB0);

@@ -27,7 +27,7 @@ std::string str_tolower(std::string s) {
     return s;
 }
 
-void printBuffer(const byte* buff, const uint8_t size, const boolean asChars, const char* header) {
+void printBuf(const byte* buff, const uint8_t size, const boolean asChars, const char* header) {
   delay(100); //delay otherwise first part of print will not be shown 
   char tmp[4];
   
