@@ -21,7 +21,7 @@
 
 // TODO Make configurable
 #define INITIAL_REPEAT_WAIT            1000 
-#define REPEAT_INTERVAL                 500
+#define REPEAT_INTERVAL                 100
 
 namespace PTM215b {
 
