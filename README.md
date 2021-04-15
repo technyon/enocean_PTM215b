@@ -8,7 +8,7 @@ https://www.enocean.com/en/products/enocean_modules_24ghz_ble/ptm-215b/
 ## Hardware
 Hardware supported:
 * Tested on an ESP32wroom
-* Enocean PTM215B selfpowered BLE switch (only tested with 1 switch so far)
+* Enocean PTM215B selfpowered BLE switch
 
 
 ## Development
