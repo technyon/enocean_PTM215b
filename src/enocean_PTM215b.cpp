@@ -65,23 +65,23 @@ void Enocean_PTM215b::startTasks(){
   }
 }
 
-void Enocean_PTM215b::onResult(BLEAdvertisedDevice advertisedDevice) {
+void Enocean_PTM215b::onResult(BLEAdvertisedDevice* advertisedDevice) {
 
-  BLEAddress bleAddress = advertisedDevice.getAddress();
+  BLEAddress bleAddress = advertisedDevice->getAddress();
   //check that the upper 2 byte of the Static Source Address are 0xE215.
   if (memcmp(bleAddress.getNative(), PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
     //check that GAP AD Type is 0xFF and for correct manufacturer id
-    if (memcmp(advertisedDevice.getPayload()+1, PMT215B_PAYLOAD_HEADER, sizeof(PMT215B_PAYLOAD_HEADER)) == 0) {
+    if (memcmp(advertisedDevice->getPayload()+1, PMT215B_PAYLOAD_HEADER, sizeof(PMT215B_PAYLOAD_HEADER)) == 0) {
       //Check if data (13 bytes) or commissioning (30) payload
       //TODO: make option to also read optional data when required, then data payload can be 13-17 bytes
-      uint8_t payloadLen = advertisedDevice.getPayloadLength();
+      uint8_t payloadLen = advertisedDevice->getPayloadLength();
       if(payloadLen == 13 ){
         DataPayload payload;
-        memcpy(&payload, advertisedDevice.getPayload(), payloadLen);
+        memcpy(&payload, advertisedDevice->getPayload(), payloadLen);
         handleDataPayload(bleAddress, payload);
       // } else if(payloadLen == 30){
       //   CommissioningPayload payload;
-      //   memcpy(&payload, advertisedDevice.getPayload(), payloadLen);
+      //   memcpy(&payload, advertisedDevice->getPayload(), payloadLen);
       //   handleCommissioningPayload(bleAddress, payload);
       }
       else{

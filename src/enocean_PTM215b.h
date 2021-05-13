@@ -8,8 +8,7 @@
 
 #include "Arduino.h"
 #include "enocean_Constants.h"
-#include "BLEDevice.h"
-#include "BLEAdvertisedDevice.h"
+#include "NimBLEDevice.h"
 #include <map>
 #include <vector>
 
@@ -188,7 +187,7 @@ class Enocean_PTM215b: public BLEAdvertisedDeviceCallbacks{
     * 
     * @param advertisedDevice Holds BLE address and payload
     */
-    void onResult(BLEAdvertisedDevice advertisedDevice) override;
+    void onResult(BLEAdvertisedDevice* advertisedDevice) override;
     
     /**
     * @brief Dedupes messages, Checks sequence counter to prevent replay attack,
