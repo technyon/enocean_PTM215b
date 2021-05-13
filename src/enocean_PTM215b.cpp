@@ -67,6 +67,12 @@ void Enocean_PTM215b::startTasks(){
 
 void Enocean_PTM215b::onResult(BLEAdvertisedDevice* advertisedDevice) {
 
+  if (advertisedDevice->haveName()) {
+    log_d("Advertisement Received from %s", advertisedDevice->getName().c_str());
+  } else {
+    log_d("Advertisement Received");
+  }
+
   BLEAddress bleAddress = advertisedDevice->getAddress();
   //check that the upper 2 byte of the Static Source Address are 0xE215.
   if (memcmp(bleAddress.getNative(), PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
@@ -254,7 +260,7 @@ void Enocean_PTM215b::registerBleSwitch(const std::string bleAddress, const std:
 }
 
 void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress& bleAddress){
-  log_v("handling button action: %d from %s", switchStatus, bleAddress.c_str());
+  log_d("handling button action: %d from %s", switchStatus, bleAddress.toString().c_str());
   if (switches.count(bleAddress) == 0) {
     log_w("No switch registered for address [%d]", bleAddress.toString().c_str());
     return;
