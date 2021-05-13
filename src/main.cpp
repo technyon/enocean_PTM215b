@@ -4,7 +4,6 @@
  * 
  * author Jeroen
  */
-
 #include "enocean_PTM215b.h"
 
 #define BLE_ADDRESS "E2:15:00:00:D4:AD"

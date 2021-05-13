@@ -17,17 +17,20 @@ void bleScanTask(void * pvParameters) {
   pBLEScan->setAdvertisedDeviceCallbacks(enocean_PTM215bObj, true); //want duplicates as we will not be connecting and only listening to adv data
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   pBLEScan->setInterval(17);
-  pBLEScan->setWindow(23);
-
+  pBLEScan->setWindow(17); // Must be between 4 and 16K and smaller or equal to Interval
 	while (1){
     if (enocean_PTM215bObj->registeredSwitchCount() > 0) {
       //scan for 10 seconds and then delete results to prevent memory leak if running for long time and registering different BLE devices
-      pBLEScan->start(10,true);
+      NimBLEScanResults result = pBLEScan->start(10,true);
+      if (result.getCount() > 0) {
+        log_d("Found %d devices", result.getCount());
+      }
       pBLEScan->clearResults();
     } else {
       log_w("No switches registered, waiting 5 sec...");
       delay(5000);
     }
+    delay(10);
   }
 }
 
@@ -59,23 +62,18 @@ void Enocean_PTM215b::initialize() {
 }
 
 void Enocean_PTM215b::startTasks(){
-  xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, 1);
+  xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
   if (enableRepeatTask) {
-    xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, 1);
+    xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
   }
 }
 
 void Enocean_PTM215b::onResult(BLEAdvertisedDevice* advertisedDevice) {
 
-  if (advertisedDevice->haveName()) {
-    log_d("Advertisement Received from %s", advertisedDevice->getName().c_str());
-  } else {
-    log_d("Advertisement Received");
-  }
-
   BLEAddress bleAddress = advertisedDevice->getAddress();
   //check that the upper 2 byte of the Static Source Address are 0xE215.
-  if (memcmp(bleAddress.getNative(), PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
+  // Note NimBLEs getNative() returns byte in reverse order
+  if (memcmp(bleAddress.getNative() + 4, PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
     //check that GAP AD Type is 0xFF and for correct manufacturer id
     if (memcmp(advertisedDevice->getPayload()+1, PMT215B_PAYLOAD_HEADER, sizeof(PMT215B_PAYLOAD_HEADER)) == 0) {
       //Check if data (13 bytes) or commissioning (30) payload
