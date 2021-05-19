@@ -26,5 +26,9 @@
       "flags": "-Wno-unused-function"
   },
   "dependencies": [
+    {
+      "name": "NimBLE",
+      "version": "h2zero/NimBLE-Arduino"
+    }
   ]
 }
