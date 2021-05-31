@@ -8,6 +8,8 @@
 #include "enocean_PTM215b.h"
 #include "enocean_utils.h"
 #include "mbedtls/aes.h"
+
+#define CONFIG_BT_NIMBLE_PINNED_TO_CORE 1
 namespace PTM215b {
 
 void bleScanTask(void* pvParameters) {
