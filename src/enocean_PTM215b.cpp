@@ -8,14 +8,19 @@
 #include "enocean_PTM215b.h"
 #include "enocean_utils.h"
 #include "mbedtls/aes.h"
+#include "TaskUtils.h"
+#include "esp_task_wdt.h"
 
 #define CONFIG_BT_NIMBLE_PINNED_TO_CORE 1
+
 namespace PTM215b {
 
 void bleScanTask(void* pvParameters) {
-#ifdef DEBUG_PTM215
-  log_d("TASK: PTM215b BLE scan task started");
-#endif
+  #ifdef DEBUG_PTM215
+    log_d("TASK: PTM215b BLE scan task started on core: %d", xPortGetCoreID());
+    UBaseType_t highwatermark = UINT_MAX;
+  #endif
+  //TODO implement watchdog? Is triggered by the blocking start call below
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
   BLEScan* pBLEScan                   = BLEDevice::getScan();       // get global scan-object
   pBLEScan->setAdvertisedDeviceCallbacks(enocean_PTM215bObj, true); // want duplicates as we will not be connecting and only listening to adv data
@@ -23,6 +28,9 @@ void bleScanTask(void* pvParameters) {
   pBLEScan->setInterval(17);
   pBLEScan->setWindow(17); // Must be between 4 and 16K and smaller or equal to Interval
   while (1) {
+    #ifdef DEBUG_PTM215
+      highwatermark = reportNewHighwaterMark(highwatermark);
+    #endif
     if (enocean_PTM215bObj->registeredSwitchCount() > 0) {
       // scan for 10 seconds and then delete results to prevent memory leak if
       // running for long time and registering different BLE devices
@@ -37,12 +45,18 @@ void bleScanTask(void* pvParameters) {
 }
 
 void repeatEventsTask(void* pvParameters) {
-#ifdef DEBUG_PTM215
-  log_d("TASK: PTM215b repeatEvents task started");
-#endif
+  #ifdef DEBUG_PTM215
+    log_d("TASK: PTM215b repeatEvents task started on core: %d", xPortGetCoreID());
+    UBaseType_t highwatermark = UINT_MAX;
+  #endif
+  esp_task_wdt_add(NULL);
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
 
   while (1) {
+    esp_task_wdt_reset();
+    #ifdef DEBUG_PTM215
+      highwatermark = reportNewHighwaterMark(highwatermark);
+    #endif
     delay(REPEAT_INTERVAL);
     enocean_PTM215bObj->generateRepeatEvents();
   }
