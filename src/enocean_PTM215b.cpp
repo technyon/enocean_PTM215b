@@ -89,6 +89,8 @@ void Enocean_PTM215b::startTasks() {
   xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
   if (enableRepeatTask) {
     xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
+    //default suspended
+    suspendRepeatTask(true);
   }
 }
 
