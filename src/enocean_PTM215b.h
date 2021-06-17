@@ -82,6 +82,13 @@ public:
   virtual ~Enocean_PTM215b();
 
   /**
+   * @brief Set task priorities
+   *
+   */
+  void setScanTaskPriority(uint8_t prio);
+  void setRepeatTaskPriority(uint8_t prio);
+
+  /**
    * @brief Initialize object and start background tasks
    *
    * The BLEDevice must have been initialized, otherwise an error will be logged
@@ -196,6 +203,13 @@ private:
    * @param -
    */
   void startTasks();
+
+  /**
+   * @brief Suspends/resumes the repeat task used for detecting llong press
+   *
+   * @param suspend true = suspend, false = resume
+   */
+  void suspendRepeatTask(bool suspend);
 
   /**
    * @brief overridden method from BLE to handle advertisement events. Checks
