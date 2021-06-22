@@ -8,39 +8,57 @@
 #include "enocean_PTM215b.h"
 #include "enocean_utils.h"
 #include "mbedtls/aes.h"
+#include "TaskUtils.h"
+#include "esp_task_wdt.h"
+
+// #define CONFIG_BT_NIMBLE_PINNED_TO_CORE 1
+
 namespace PTM215b {
 
 void bleScanTask(void* pvParameters) {
-#ifdef DEBUG_PTM215
-  log_d("TASK: PTM215b BLE scan task started");
-#endif
+  #ifdef DEBUG_PTM215
+    log_d("TASK: PTM215b BLE scan task started on core: %d", xPortGetCoreID());
+    UBaseType_t highwatermark = UINT_MAX;
+  #endif
+  //TODO implement watchdog? Is triggered by the blocking start call below
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
   BLEScan* pBLEScan                   = BLEDevice::getScan();       // get global scan-object
   pBLEScan->setAdvertisedDeviceCallbacks(enocean_PTM215bObj, true); // want duplicates as we will not be connecting and only listening to adv data
   pBLEScan->setActiveScan(true);                                    // active scan uses more power, but get results faster
   pBLEScan->setInterval(17);
   pBLEScan->setWindow(17); // Must be between 4 and 16K and smaller or equal to Interval
+  esp_task_wdt_add(NULL);
   while (1) {
+    esp_task_wdt_reset();
+    #ifdef DEBUG_PTM215
+      highwatermark = reportNewHighwaterMark(highwatermark);
+    #endif
     if (enocean_PTM215bObj->registeredSwitchCount() > 0) {
-      // scan for 10 seconds and then delete results to prevent memory leak if
+      // scan for 3 seconds and then delete results to prevent memory leak if
       // running for long time and registering different BLE devices
-      pBLEScan->start(10, true);
+      pBLEScan->start(3, true);
       pBLEScan->clearResults();
     } else {
-      log_w("No switches registered, waiting 5 sec...");
-      delay(5000);
+      log_w("No switches registered, waiting 3 sec...");
+      delay(3000);
     }
-    delay(10);
+    // delay(10);
   }
 }
 
 void repeatEventsTask(void* pvParameters) {
-#ifdef DEBUG_PTM215
-  log_d("TASK: PTM215b repeatEvents task started");
-#endif
+  #ifdef DEBUG_PTM215
+    log_d("TASK: PTM215b repeatEvents task started on core: %d", xPortGetCoreID());
+    UBaseType_t highwatermark = UINT_MAX;
+  #endif
+  esp_task_wdt_add(NULL);
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
 
   while (1) {
+    esp_task_wdt_reset();
+    #ifdef DEBUG_PTM215
+      highwatermark = reportNewHighwaterMark(highwatermark);
+    #endif
     delay(REPEAT_INTERVAL);
     enocean_PTM215bObj->generateRepeatEvents();
   }
@@ -71,7 +89,35 @@ void Enocean_PTM215b::startTasks() {
   xTaskCreatePinnedToCore(&bleScanTask, "PMT215_scanBleTask", 4096, this, 1, &bleScanTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
   if (enableRepeatTask) {
     xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215_repeatEventsTask", 4096, this, 1, &repeatEventsTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
+    //default suspended
+    suspendRepeatTask(true);
   }
+}
+
+void Enocean_PTM215b::suspendRepeatTask(bool suspend) {
+  if (repeatEventsTaskHandle != NULL) {
+    if (suspend) {
+      esp_task_wdt_delete(repeatEventsTaskHandle);
+      vTaskSuspend(repeatEventsTaskHandle);  
+      #ifdef DEBUG_PTM215
+        log_d("Repeat task suspended");
+      #endif
+    } else if (!(eTaskGetState(repeatEventsTaskHandle) < 3) ){      //task is not ready, running or blocked (iow not suspended)
+      vTaskResume(repeatEventsTaskHandle);
+      esp_task_wdt_add(repeatEventsTaskHandle);
+      #ifdef DEBUG_PTM215
+        log_d("Repeat task resumed");
+      #endif
+    }
+  }
+}
+
+void Enocean_PTM215b::setScanTaskPriority(uint8_t prio){
+  vTaskPrioritySet(bleScanTaskHandle, prio);
+}
+
+void Enocean_PTM215b::setRepeatTaskPriority(uint8_t prio){
+  vTaskPrioritySet(repeatEventsTaskHandle, prio);
 }
 
 void Enocean_PTM215b::onResult(BLEAdvertisedDevice* advertisedDevice) {
@@ -286,14 +332,19 @@ void Enocean_PTM215b::registerBleSwitch(
 }
 
 void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress& bleAddress) {
-#ifdef DEBUG_PTM215
-  log_d("handling button action: %d from %s", switchStatus,
-        bleAddress.toString().c_str());
-#endif
+
+  #ifdef DEBUG_PTM215
+    log_d("handling button action: %d from %s", switchStatus,
+          bleAddress.toString().c_str());
+  #endif
+  
   if (switches.count(bleAddress) == 0) {
     log_w("No switch registered for address [%d]", bleAddress.toString().c_str());
     return;
   }
+
+  //start repeat task
+  suspendRepeatTask(false);
 
   Switch bleSwitch = switches[bleAddress];
 
@@ -310,6 +361,7 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress&
     nodeId = bleSwitch.nodeIdB1;
   } else {
     log_e("Invalid switchStatus [0x%02X]", switchStatus);
+    suspendRepeatTask(true);
     return;
   }
 
@@ -321,6 +373,7 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress&
     direction = Direction::Down;
   } else {
     log_e("No valid Direction in switchStatus [0x%02X]", switchStatus);
+    suspendRepeatTask(true);
     return;
   }
 
@@ -337,6 +390,7 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress&
   event.direction = direction;
 
   if (type == ActionType::Release) {
+    suspendRepeatTask(true);
     if (millis() - INITIAL_REPEAT_WAIT < actions[nodeId].pushStartTime) {
       event.eventType = EventType::ReleaseShort;
     } else {
