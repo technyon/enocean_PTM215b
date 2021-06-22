@@ -28,7 +28,7 @@
   "dependencies": [
     {
       "name": "NimBLE",
-      "version": "h2zero/NimBLE-Arduino"
+      "version": "https://github.com/I-Connect/NimBLE-Arduino"
     }
   ]
 }
