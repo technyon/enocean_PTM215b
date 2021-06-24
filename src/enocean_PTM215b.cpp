@@ -102,7 +102,7 @@ void Enocean_PTM215b::suspendRepeatTask(bool suspend) {
       #ifdef DEBUG_PTM215
         log_d("Repeat task suspended");
       #endif
-    } else if (!(eTaskGetState(repeatEventsTaskHandle) < 3) ){      //task is not ready, running or blocked (iow not suspended)
+    } else if (isSuspended(repeatEventsTaskHandle) ){
       vTaskResume(repeatEventsTaskHandle);
       esp_task_wdt_add(repeatEventsTaskHandle);
       #ifdef DEBUG_PTM215
@@ -110,6 +110,14 @@ void Enocean_PTM215b::suspendRepeatTask(bool suspend) {
       #endif
     }
   }
+}
+
+bool Enocean_PTM215b::isSuspended(TaskHandle_t taskHandle) {
+  if (taskHandle) {
+    eTaskState state = eTaskGetState(taskHandle);
+    return ((state == eSuspended) || (state == eDeleted));
+  } 
+  return false;
 }
 
 void Enocean_PTM215b::setScanTaskPriority(uint8_t prio){

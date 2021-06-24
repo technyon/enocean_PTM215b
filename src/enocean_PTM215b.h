@@ -89,6 +89,13 @@ public:
   void setRepeatTaskPriority(uint8_t prio);
 
   /**
+   * @brief return is task is suspended
+   *
+   * @param taskHandle taskHandle to check
+   */
+  bool isSuspended(TaskHandle_t taskHandle);
+
+  /**
    * @brief Initialize object and start background tasks
    *
    * The BLEDevice must have been initialized, otherwise an error will be logged
