@@ -50,7 +50,7 @@ void setup(){
   Serial.begin(115200);
   log_d("Starting Enocean_PTM215b BLE Example application...");
     
-  BLEDevice::init("ESP32_client");
+  NimBLEDevice::init("ESP32_client");
   enocean_PTM215b.initialize();
 
   log_d("Adding switch");

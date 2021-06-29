@@ -22,7 +22,7 @@ void bleScanTask(void* pvParameters) {
   #endif
   //TODO implement watchdog? Is triggered by the blocking start call below
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
-  BLEScan* pBLEScan                   = BLEDevice::getScan();       // get global scan-object
+  NimBLEScan* pBLEScan                   =NimBLEDevice::getScan();       // get global scan-object
   pBLEScan->setAdvertisedDeviceCallbacks(enocean_PTM215bObj, true); // want duplicates as we will not be connecting and only listening to adv data
   pBLEScan->setActiveScan(true);                                    // active scan uses more power, but get results faster
   pBLEScan->setInterval(17);
@@ -34,9 +34,9 @@ void bleScanTask(void* pvParameters) {
       highwatermark = reportNewHighwaterMark(highwatermark);
     #endif
     if (enocean_PTM215bObj->registeredSwitchCount() > 0) {
-      // scan for 3 seconds and then delete results to prevent memory leak if
+      // scan for 1 seconds and then delete results to prevent memory leak if
       // running for long time and registering different BLE devices
-      pBLEScan->start(3, true);
+      pBLEScan->start(1, true);
       pBLEScan->clearResults();
     } else {
       log_w("No switches registered, waiting 3 sec...");
@@ -78,7 +78,7 @@ void Enocean_PTM215b::initialize() {
 #ifdef DEBUG_PTM215
   log_d("Initializing PTM215b");
 #endif
-  if (!BLEDevice::getInitialized()) {
+  if (!NimBLEDevice::getInitialized()) {
     log_e("BLEDevice not initialized");
     return;
   }
@@ -128,9 +128,9 @@ void Enocean_PTM215b::setRepeatTaskPriority(uint8_t prio){
   vTaskPrioritySet(repeatEventsTaskHandle, prio);
 }
 
-void Enocean_PTM215b::onResult(BLEAdvertisedDevice* advertisedDevice) {
+void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
 
-  BLEAddress bleAddress = advertisedDevice->getAddress();
+ NimBLEAddress bleAddress = advertisedDevice->getAddress();
   // check that the upper 2 byte of the Static Source Address are 0xE215.
   // Note NimBLEs getNative() returns byte in reverse order
   if (memcmp(bleAddress.getNative() + 4, PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
@@ -156,7 +156,7 @@ void Enocean_PTM215b::onResult(BLEAdvertisedDevice* advertisedDevice) {
   }
 }
 
-void Enocean_PTM215b::handleDataPayload(BLEAddress& bleAddress,
+void Enocean_PTM215b::handleDataPayload(NimBLEAddress& bleAddress,
                                         DataPayload& payload) {
   if (switches.count(bleAddress) == 0) {
     log_w("Unknown address [%s]", bleAddress.toString().c_str());
@@ -187,7 +187,7 @@ void Enocean_PTM215b::handleDataPayload(BLEAddress& bleAddress,
   }
 }
 
-bool Enocean_PTM215b::securityKeyValid(BLEAddress& bleAddress,
+bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress,
                                        DataPayload& payload) {
   unsigned char nonce[13] = {0};
   uint8_t a0Flag          = 0x01;
@@ -322,7 +322,7 @@ void Enocean_PTM215b::registerBleSwitch(
   bleSwitch.eventHandler = handler;
   hexStringToByteArray(securityKey, bleSwitch.securityKey, sizeof(bleSwitch.securityKey));
 
-  BLEAddress address{bleAddress};
+ NimBLEAddress address{bleAddress};
   switches[address] = bleSwitch;
 
 #ifdef DEBUG_PTM215
@@ -339,7 +339,7 @@ void Enocean_PTM215b::registerBleSwitch(
 #endif
 }
 
-void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, BLEAddress& bleAddress) {
+void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddress& bleAddress) {
 
   #ifdef DEBUG_PTM215
     log_d("handling button action: %d from %s", switchStatus,
