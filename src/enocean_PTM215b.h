@@ -56,6 +56,29 @@ public:
   virtual void handleEvent(SwitchEvent& evt) = 0;
 };
 
+  enum PayloadType {
+    Data,
+    Commisioning
+  };
+  struct Payload {
+    unsigned char len;
+    unsigned char type;
+    char manufacturerId[2];
+    uint32_t sequenceCounter;
+    PayloadType payloadType;
+    union {
+      struct { 
+        uint8_t switchStatus;
+        char optionalData[4];
+        char receivedSecurityKey[4];
+      } data;
+      struct { 
+        char securityKey[16];
+        char staticSourceAddress[6];
+      } commisioning;
+    };
+  };
+
 /**
  * @brief Class handling BLE advertisement messages received from multiple
  * Enocean BLE215b devices
@@ -143,27 +166,6 @@ public:
   uint8_t registeredSwitchCount() { return switches.size(); }
 
 private:
-  /** Contents of a payload telegram */
-  struct DataPayload {
-    unsigned char len        = 0x00;
-    unsigned char type       = 0x00;
-    char manufacturerId[2]   = {0};
-    uint32_t sequenceCounter = 0;
-    uint8_t switchStatus     = 0;
-    // char optionalData[4] 	          = {0};  //TODO, make option to also read
-    // optional data when required
-    char receivedSecurityKey[4] = {0};
-  };
-
-  /** Contents of a commissioning telegram */
-  struct CommissioningPayload {
-    unsigned char len           = 0x00;
-    unsigned char type          = 0x00;
-    char manufacturerId[2]      = {0};
-    char sequenceCounter[4]     = {0};
-    char securityKey[16]        = {0};
-    char staticSourceAddress[6] = {0};
-  };
 
   struct Switch {
     uint32_t lastSequenceCounter = 0;
@@ -225,29 +227,32 @@ private:
    * @param advertisedDevice Holds BLE address and payload
    */
   void onResult(BLEAdvertisedDevice* advertisedDevice) override;
+  
+  Payload getPayload(NimBLEAdvertisedDevice* advertisedDevice);
 
   /**
    * @brief Dedupes messages, Checks sequence counter to prevent replay attack,
    * and call handleSwitch action if security key is valid
    *
    * @param advertisedDevice Holds BLE address and payload
+   * @param payload
    */
-  void handleDataPayload(BLEAddress& bleAddress, DataPayload& payload);
+  void handleDataPayload(BLEAddress& bleAddress, Payload& payload);
 
   /**
    * @brief Handles commissioning data (to be implemented)
    *
    * @param bleAddress BLE address of switch sending commissioning data
+   * @param payload
    */
-  // void handleCommissioningPayload(BLEAddress& bleAddress,
-  // CommissioningPayload& payload);
+  void handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload);
 
   /**
    * @brief Checks with AES128 encryption is sent security key is correct
    *
    * @param bleAddress BLE address of switch being handled
    */
-  bool securityKeyValid(BLEAddress& bleAddress, DataPayload& payload);
+  bool securityKeyValid(BLEAddress& bleAddress, Payload& payload);
 
   /**
    * @brief Handle final result of switch action

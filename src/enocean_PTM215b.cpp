@@ -8,7 +8,6 @@
 #include "enocean_PTM215b.h"
 #include "enocean_utils.h"
 #include "mbedtls/aes.h"
-#include "TaskUtils.h"
 #include "esp_task_wdt.h"
 
 // #define CONFIG_BT_NIMBLE_PINNED_TO_CORE 1
@@ -134,30 +133,44 @@ void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
   // check that the upper 2 byte of the Static Source Address are 0xE215.
   // Note NimBLEs getNative() returns byte in reverse order
   if (memcmp(bleAddress.getNative() + 4, PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
+
+    Payload payload = getPayload(advertisedDevice);
+
     // check that GAP AD Type is 0xFF and for correct manufacturer id
-    if (memcmp(advertisedDevice->getPayload() + 1, PMT215B_PAYLOAD_HEADER, sizeof(PMT215B_PAYLOAD_HEADER)) == 0) {
-      // Check if data (13 bytes) or commissioning (30) payload
-      // TODO: make option to also read optional data when required, then data
-      // payload can be 13-17 bytes
-      uint8_t payloadLen = advertisedDevice->getPayloadLength();
-      if (payloadLen == 13) {
-        DataPayload payload;
-        memcpy(&payload, advertisedDevice->getPayload(), payloadLen);
+    if ((payload.type == PMT215B_PAYLOAD_TYPE) && (memcmp(payload.manufacturerId, PMT215B_PAYLOAD_MANUFACTURER, sizeof(PMT215B_PAYLOAD_MANUFACTURER)) == 0)) {
+      if (payload.payloadType == Data) {
         handleDataPayload(bleAddress, payload);
-        // } else if(payloadLen == 30){
-        //   CommissioningPayload payload;
-        //   memcpy(&payload, advertisedDevice->getPayload(), payloadLen);
-        //   handleCommissioningPayload(bleAddress, payload);
       } else {
-        log_e("BLE Payload size does not match for Enocean switch");
-        return;
+         handleCommissioningPayload(bleAddress, payload);
       }
     }
   }
 }
 
-void Enocean_PTM215b::handleDataPayload(NimBLEAddress& bleAddress,
-                                        DataPayload& payload) {
+Payload Enocean_PTM215b::getPayload(NimBLEAdvertisedDevice* advertisedDevice) {
+  Payload payload;
+  
+  memcpy(&payload, advertisedDevice->getPayload(), 8);
+
+  if (payload.len <= 17) {
+    // Data payload
+    payload.payloadType = Data;
+    payload.data.switchStatus = advertisedDevice->getPayload()[8];
+    if (payload.len > 13) {
+      memcpy(&payload.data.optionalData, advertisedDevice->getPayload() + 9, payload.len - 9);
+    } else {
+      memcpy(&payload.data.receivedSecurityKey, advertisedDevice->getPayload() + 9, 4);
+    }
+  } else {
+    // commisioning payload
+    payload.payloadType = Commisioning;
+    memcpy(&payload.commisioning, advertisedDevice->getPayload() + 8, payload.len - 8);
+  }
+
+  return payload;
+}
+
+void Enocean_PTM215b::handleDataPayload(NimBLEAddress& bleAddress, Payload& payload) {
   if (switches.count(bleAddress) == 0) {
     log_w("Unknown address [%s]", bleAddress.toString().c_str());
     return;
@@ -182,13 +195,12 @@ void Enocean_PTM215b::handleDataPayload(NimBLEAddress& bleAddress,
     if (securityKeyValid(bleAddress, payload)) {
       // save last sequence nr
       switches[bleAddress].lastSequenceCounter = payload.sequenceCounter;
-      handleSwitchAction(payload.switchStatus, bleAddress);
+      handleSwitchAction(payload.data.switchStatus, bleAddress);
     }
   }
 }
 
-bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress,
-                                       DataPayload& payload) {
+bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress, Payload& payload) {
   unsigned char nonce[13] = {0};
   uint8_t a0Flag          = 0x01;
   uint8_t b0Flag          = 0x49;
@@ -224,7 +236,7 @@ bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress,
   b1[3] = payload.type;
   memcpy(&b1[4], payload.manufacturerId, sizeof(payload.manufacturerId));
   memcpy(&b1[6], &payload.sequenceCounter, sizeof(payload.sequenceCounter));
-  b1[10] = payload.switchStatus;
+  b1[10] = payload.data.switchStatus;
 
   unsigned char x1[16]  = {0};
   unsigned char x1a[16] = {0};
@@ -278,7 +290,7 @@ bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress,
 #endif
 #endif
 
-  if (memcmp(t0, payload.receivedSecurityKey, 4) == 0) {
+  if (memcmp(t0, payload.data.receivedSecurityKey, 4) == 0) {
     return true;
   } else {
     log_e("Incorrect security key");
@@ -286,21 +298,21 @@ bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress,
   }
 }
 
-// void Enocean_PTM215b::handleCommissioningPayload(std::string bleAddress) {
-//   #ifdef DEBUG_COMMISSIONING_DATA
-//     log_d("## START commissioning payload ##");
-//     log_d("BLE address: %s", bleAddress.c_str());
-//     log_d("PayloadLen: %d", dataPayloadBuffer.len);
-//     log_d("PayloadLen: %x", dataPayloadBuffer.type);
-//     printBuf((byte*)commissioningPayloadBuffer.manufacturerId, 2, false,
-//     "PayloadManufacturerId"); log_d("PayloadseqCounter: %d",
-//     commissioningPayloadBuffer.sequenceCounter);
-//     printBuf((byte*)commissioningPayloadBuffer.securityKey, 16, false,
-//     "securitykey");
-//     printBuf((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false,
-//     "PayloadOptionalData"); log_d("## END commissioning payload ##");
-//   #endif
-// }
+void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload) {
+  #ifdef DEBUG_COMMISSIONING_DATA
+    log_d("## START commissioning payload ##");
+    log_d("BLE address: %s", bleAddress.c_str());
+    log_d("PayloadLen: %d", dataPayloadBuffer.len);
+    log_d("PayloadLen: %x", dataPayloadBuffer.type);
+    printBuf((byte*)commissioningPayloadBuffer.manufacturerId, 2, false,
+    "PayloadManufacturerId"); log_d("PayloadseqCounter: %d",
+    commissioningPayloadBuffer.sequenceCounter);
+    printBuf((byte*)commissioningPayloadBuffer.securityKey, 16, false,
+    "securitykey");
+    printBuf((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false,
+    "PayloadOptionalData"); log_d("## END commissioning payload ##");
+  #endif
+}
 
 void Enocean_PTM215b::registerBleSwitch(std::string bleAddress,
                                         const std::string securityKey,
