@@ -7,21 +7,22 @@
 
 #include "enocean_PTM215b.h"
 #include "enocean_utils.h"
-#include "mbedtls/aes.h"
 #include "esp_task_wdt.h"
+#include "mbedtls/aes.h"
+
 
 // #define CONFIG_BT_NIMBLE_PINNED_TO_CORE 1
 
 namespace PTM215b {
 
 void bleScanTask(void* pvParameters) {
-  #ifdef DEBUG_PTM215
-    log_d("TASK: PTM215b BLE scan task started on core: %d", xPortGetCoreID());
-    UBaseType_t highwatermark = UINT_MAX;
-  #endif
+#ifdef DEBUG_PTM215
+  log_d("TASK: PTM215b BLE scan task started on core: %d", xPortGetCoreID());
+  UBaseType_t highwatermark = UINT_MAX;
+#endif
   //TODO implement watchdog? Is triggered by the blocking start call below
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
-  NimBLEScan* pBLEScan                   =NimBLEDevice::getScan();       // get global scan-object
+  NimBLEScan* pBLEScan                = NimBLEDevice::getScan();    // get global scan-object
   pBLEScan->setAdvertisedDeviceCallbacks(enocean_PTM215bObj, true); // want duplicates as we will not be connecting and only listening to adv data
   pBLEScan->setActiveScan(true);                                    // active scan uses more power, but get results faster
   pBLEScan->setInterval(17);
@@ -29,9 +30,9 @@ void bleScanTask(void* pvParameters) {
   esp_task_wdt_add(NULL);
   while (1) {
     esp_task_wdt_reset();
-    #ifdef DEBUG_PTM215
-      highwatermark = reportNewHighwaterMark(highwatermark);
-    #endif
+#ifdef DEBUG_PTM215
+    highwatermark = reportNewHighwaterMark(highwatermark);
+#endif
     if (enocean_PTM215bObj->registeredSwitchCount() > 0) {
       // scan for 1 seconds and then delete results to prevent memory leak if
       // running for long time and registering different BLE devices
@@ -46,18 +47,18 @@ void bleScanTask(void* pvParameters) {
 }
 
 void repeatEventsTask(void* pvParameters) {
-  #ifdef DEBUG_PTM215
-    log_d("TASK: PTM215b repeatEvents task started on core: %d", xPortGetCoreID());
-    UBaseType_t highwatermark = UINT_MAX;
-  #endif
+#ifdef DEBUG_PTM215
+  log_d("TASK: PTM215b repeatEvents task started on core: %d", xPortGetCoreID());
+  UBaseType_t highwatermark = UINT_MAX;
+#endif
   esp_task_wdt_add(NULL);
   Enocean_PTM215b* enocean_PTM215bObj = static_cast<Enocean_PTM215b*>(pvParameters);
 
   while (1) {
     esp_task_wdt_reset();
-    #ifdef DEBUG_PTM215
-      highwatermark = reportNewHighwaterMark(highwatermark);
-    #endif
+#ifdef DEBUG_PTM215
+    highwatermark = reportNewHighwaterMark(highwatermark);
+#endif
     delay(REPEAT_INTERVAL);
     enocean_PTM215bObj->generateRepeatEvents();
   }
@@ -97,16 +98,16 @@ void Enocean_PTM215b::suspendRepeatTask(bool suspend) {
   if (repeatEventsTaskHandle != NULL) {
     if (suspend) {
       esp_task_wdt_delete(repeatEventsTaskHandle);
-      vTaskSuspend(repeatEventsTaskHandle);  
-      #ifdef DEBUG_PTM215
-        log_d("Repeat task suspended");
-      #endif
-    } else if (isSuspended(repeatEventsTaskHandle) ){
+      vTaskSuspend(repeatEventsTaskHandle);
+#ifdef DEBUG_PTM215
+      log_d("Repeat task suspended");
+#endif
+    } else if (isSuspended(repeatEventsTaskHandle)) {
       vTaskResume(repeatEventsTaskHandle);
       esp_task_wdt_add(repeatEventsTaskHandle);
-      #ifdef DEBUG_PTM215
-        log_d("Repeat task resumed");
-      #endif
+#ifdef DEBUG_PTM215
+      log_d("Repeat task resumed");
+#endif
     }
   }
 }
@@ -115,21 +116,21 @@ bool Enocean_PTM215b::isSuspended(TaskHandle_t taskHandle) {
   if (taskHandle) {
     eTaskState state = eTaskGetState(taskHandle);
     return ((state == eSuspended) || (state == eDeleted));
-  } 
+  }
   return false;
 }
 
-void Enocean_PTM215b::setScanTaskPriority(uint8_t prio){
+void Enocean_PTM215b::setScanTaskPriority(uint8_t prio) {
   vTaskPrioritySet(bleScanTaskHandle, prio);
 }
 
-void Enocean_PTM215b::setRepeatTaskPriority(uint8_t prio){
+void Enocean_PTM215b::setRepeatTaskPriority(uint8_t prio) {
   vTaskPrioritySet(repeatEventsTaskHandle, prio);
 }
 
 void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
 
- NimBLEAddress bleAddress = advertisedDevice->getAddress();
+  NimBLEAddress bleAddress = advertisedDevice->getAddress();
   // check that the upper 2 byte of the Static Source Address are 0xE215.
   // Note NimBLEs getNative() returns byte in reverse order
   if (memcmp(bleAddress.getNative() + 4, PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
@@ -141,20 +142,20 @@ void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
       if (payload.payloadType == Data) {
         handleDataPayload(bleAddress, payload);
       } else {
-         handleCommissioningPayload(bleAddress, payload);
+        handleCommissioningPayload(bleAddress, payload);
       }
     }
   }
 }
 
-Payload Enocean_PTM215b::getPayload(NimBLEAdvertisedDevice* advertisedDevice) {
+Enocean_PTM215b::Payload Enocean_PTM215b::getPayload(NimBLEAdvertisedDevice* advertisedDevice) {
   Payload payload;
-  
+
   memcpy(&payload, advertisedDevice->getPayload(), 8);
 
   if (payload.len <= 17) {
     // Data payload
-    payload.payloadType = Data;
+    payload.payloadType       = Data;
     payload.data.switchStatus = advertisedDevice->getPayload()[8];
     if (payload.len > 13) {
       memcpy(&payload.data.optionalData, advertisedDevice->getPayload() + 9, payload.len - 9);
@@ -299,19 +300,21 @@ bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress, Payload& paylo
 }
 
 void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload) {
-  #ifdef DEBUG_COMMISSIONING_DATA
-    log_d("## START commissioning payload ##");
-    log_d("BLE address: %s", bleAddress.c_str());
-    log_d("PayloadLen: %d", dataPayloadBuffer.len);
-    log_d("PayloadLen: %x", dataPayloadBuffer.type);
-    printBuf((byte*)commissioningPayloadBuffer.manufacturerId, 2, false,
-    "PayloadManufacturerId"); log_d("PayloadseqCounter: %d",
-    commissioningPayloadBuffer.sequenceCounter);
-    printBuf((byte*)commissioningPayloadBuffer.securityKey, 16, false,
-    "securitykey");
-    printBuf((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false,
-    "PayloadOptionalData"); log_d("## END commissioning payload ##");
-  #endif
+#ifdef DEBUG_COMMISSIONING_DATA
+  log_d("## START commissioning payload ##");
+  log_d("BLE address: %s", bleAddress.c_str());
+  log_d("PayloadLen: %d", dataPayloadBuffer.len);
+  log_d("PayloadLen: %x", dataPayloadBuffer.type);
+  printBuf((byte*)commissioningPayloadBuffer.manufacturerId, 2, false,
+           "PayloadManufacturerId");
+  log_d("PayloadseqCounter: %d",
+        commissioningPayloadBuffer.sequenceCounter);
+  printBuf((byte*)commissioningPayloadBuffer.securityKey, 16, false,
+           "securitykey");
+  printBuf((byte*)commissioningPayloadBuffer.staticSourceAddress, 6, false,
+           "PayloadOptionalData");
+  log_d("## END commissioning payload ##");
+#endif
 }
 
 void Enocean_PTM215b::registerBleSwitch(std::string bleAddress,
@@ -334,7 +337,7 @@ void Enocean_PTM215b::registerBleSwitch(
   bleSwitch.eventHandler = handler;
   hexStringToByteArray(securityKey, bleSwitch.securityKey, sizeof(bleSwitch.securityKey));
 
- NimBLEAddress address{bleAddress};
+  NimBLEAddress address{bleAddress};
   switches[address] = bleSwitch;
 
 #ifdef DEBUG_PTM215
@@ -353,11 +356,11 @@ void Enocean_PTM215b::registerBleSwitch(
 
 void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddress& bleAddress) {
 
-  #ifdef DEBUG_PTM215
-    log_d("handling button action: %d from %s", switchStatus,
-          bleAddress.toString().c_str());
-  #endif
-  
+#ifdef DEBUG_PTM215
+  log_d("handling button action: %d from %s", switchStatus,
+        bleAddress.toString().c_str());
+#endif
+
   if (switches.count(bleAddress) == 0) {
     log_w("No switch registered for address [%d]", bleAddress.toString().c_str());
     return;

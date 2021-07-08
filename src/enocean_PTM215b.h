@@ -19,7 +19,7 @@
 
 // TODO Make configurable
 #define INITIAL_REPEAT_WAIT 1000
-#define REPEAT_INTERVAL 100
+#define REPEAT_INTERVAL 500
 
 namespace PTM215b {
 
@@ -34,9 +34,9 @@ enum class EventType {
  * @brief Up or Down button pressed / released
  *
  */
-enum class Direction { 
+enum class Direction {
   Down,
-  Up 
+  Up
 };
 
 /**
@@ -55,29 +55,6 @@ public:
   virtual ~Eventhandler(){};
   virtual void handleEvent(SwitchEvent& evt) = 0;
 };
-
-  enum PayloadType {
-    Data,
-    Commisioning
-  };
-  struct Payload {
-    unsigned char len;
-    unsigned char type;
-    char manufacturerId[2];
-    uint32_t sequenceCounter;
-    PayloadType payloadType;
-    union {
-      struct { 
-        uint8_t switchStatus;
-        char optionalData[4];
-        char receivedSecurityKey[4];
-      } data;
-      struct { 
-        char securityKey[16];
-        char staticSourceAddress[6];
-      } commisioning;
-    };
-  };
 
 /**
  * @brief Class handling BLE advertisement messages received from multiple
@@ -166,7 +143,28 @@ public:
   uint8_t registeredSwitchCount() { return switches.size(); }
 
 private:
-
+  enum PayloadType {
+    Data,
+    Commisioning
+  };
+  struct Payload {
+    unsigned char len;
+    unsigned char type;
+    char manufacturerId[2];
+    uint32_t sequenceCounter;
+    PayloadType payloadType;
+    union {
+      struct {
+        uint8_t switchStatus;
+        char optionalData[4];
+        char receivedSecurityKey[4];
+      } data;
+      struct {
+        char securityKey[16];
+        char staticSourceAddress[6];
+      } commisioning;
+    };
+  };
   struct Switch {
     uint32_t lastSequenceCounter = 0;
     uint8_t securityKey[16]      = {0};
@@ -227,7 +225,7 @@ private:
    * @param advertisedDevice Holds BLE address and payload
    */
   void onResult(BLEAdvertisedDevice* advertisedDevice) override;
-  
+
   Payload getPayload(NimBLEAdvertisedDevice* advertisedDevice);
 
   /**
