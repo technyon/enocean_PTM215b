@@ -49,12 +49,34 @@ struct SwitchEvent {
   EventType eventType;
 };
 
+
 class Eventhandler {
 public:
   Eventhandler(){};
   virtual ~Eventhandler(){};
   virtual void handleEvent(SwitchEvent& evt) = 0;
 };
+
+struct CommissioningEvent {
+  BLEAddress address;
+  byte securityKey[16];
+};
+
+/**
+ * @brief Handler for commissionEvents from a BLE Switch
+ * 
+ * The event is sent when the swtich is put into commissioning mode and when the same
+ * button is pressed or released when in commissioning mode.
+ * 
+ * Note that the handler must be able to handle receiving the same commission event multiple times!
+ */
+class CommissioningEventhandler {
+public:
+  CommissioningEventhandler(){};
+  virtual ~CommissioningEventhandler(){};
+  virtual void handleEvent(CommissioningEvent& evt) = 0;
+};
+
 
 /**
  * @brief Class handling BLE advertisement messages received from multiple
@@ -104,6 +126,10 @@ public:
    */
   void initialize();
 
+  void setCommissioningEventHandler(CommissioningEventhandler* handler) {
+    commissioningEventhandler = handler;
+  }
+
   /**
    * @brief Register a switch
    *
@@ -124,7 +150,14 @@ public:
                          const std::string securityKey, const uint8_t nodeIdA,
                          const uint8_t nodeIdB, Eventhandler* handler);
   void registerBleSwitch(const std::string bleAddress,
+                         const byte securityKey[16], const uint8_t nodeIdA,
+                         const uint8_t nodeIdB, Eventhandler* handler);
+  void registerBleSwitch(const std::string bleAddress,
                          const std::string securityKey, const uint8_t nodeIdA0,
+                         const uint8_t nodeIdA1, const uint8_t nodeIdB0,
+                         const uint8_t nodeIdB1, Eventhandler* handler);
+  void registerBleSwitch(const std::string bleAddress,
+                         const byte securityKey[16], const uint8_t nodeIdA0,
                          const uint8_t nodeIdA1, const uint8_t nodeIdB0,
                          const uint8_t nodeIdB1, Eventhandler* handler);
 
@@ -148,23 +181,24 @@ private:
     Commisioning
   };
   struct Payload {
-    unsigned char len;
-    unsigned char type;
+    byte len;
+    byte type;
     char manufacturerId[2];
     uint32_t sequenceCounter;
     PayloadType payloadType;
     union {
-      struct {
+      struct { // Data
         uint8_t switchStatus;
-        char optionalData[4];
-        char receivedSecurityKey[4];
+        byte optionalData[4];
+        byte receivedSecurityKey[4];
       } data;
-      struct {
-        char securityKey[16];
-        char staticSourceAddress[6];
+      struct { // Commissioning
+        byte securityKey[16];
+        byte staticSourceAddress[6]; // LSB first
       } commisioning;
     };
   };
+  
   struct Switch {
     uint32_t lastSequenceCounter = 0;
     uint8_t securityKey[16]      = {0};
@@ -191,6 +225,8 @@ private:
   boolean enableRepeatTask;
   TaskHandle_t repeatEventsTaskHandle = nullptr;
   TaskHandle_t bleScanTaskHandle      = nullptr;
+  CommissioningEventhandler* commissioningEventhandler = nullptr;
+  uint32_t lastCommissioningCounter = 0;
 
   /**
    * @brief Map of registered switches by BleAddress
@@ -238,7 +274,7 @@ private:
   void handleDataPayload(BLEAddress& bleAddress, Payload& payload);
 
   /**
-   * @brief Handles commissioning data (to be implemented)
+   * @brief Handles commissioning data
    *
    * @param bleAddress BLE address of switch sending commissioning data
    * @param payload
