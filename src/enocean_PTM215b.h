@@ -111,7 +111,7 @@ public:
   void setRepeatTaskPriority(uint8_t prio);
 
   /**
-   * @brief return is task is suspended
+   * @brief return if task is suspended
    *
    * @param taskHandle taskHandle to check
    */
@@ -195,7 +195,7 @@ private:
       struct { // Commissioning
         byte securityKey[16];
         byte staticSourceAddress[6]; // LSB first
-      } commisioning;
+      } commissioning;
     };
   };
   
@@ -271,7 +271,7 @@ private:
    * @param advertisedDevice Holds BLE address and payload
    * @param payload
    */
-  void handleDataPayload(BLEAddress& bleAddress, Payload& payload);
+  void handleDataPayload(NimBLEAddress& bleAddress, Payload& payload);
 
   /**
    * @brief Handles commissioning data
@@ -279,7 +279,7 @@ private:
    * @param bleAddress BLE address of switch sending commissioning data
    * @param payload
    */
-  void handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload);
+  void handleCommissioningPayload(NimBLEAddress& bleAddress, Payload& payload);
 
   /**
    * @brief Checks with AES128 encryption is sent security key is correct

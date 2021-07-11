@@ -161,9 +161,9 @@ Enocean_PTM215b::Payload Enocean_PTM215b::getPayload(NimBLEAdvertisedDevice* adv
     memcpy(&payload.data.receivedSecurityKey, nextPayload, 4);
 
   } else if (payload.len == 29) {
-    // commisioning payload
+    // commissioning payload
     payload.payloadType = Commisioning;
-    memcpy(&payload.commisioning, nextPayload, 22);
+    memcpy(&payload.commissioning, nextPayload, 22);
   }
 
   return payload;
@@ -297,7 +297,7 @@ bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress, Payload& paylo
   }
 }
 
-void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload) {
+void Enocean_PTM215b::handleCommissioningPayload(NimBLEAddress& bleAddress, Payload& payload) {
   if (lastCommissioningCounter == payload.sequenceCounter) {
     // discard repeated messages
     return;
@@ -307,19 +307,19 @@ void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload
   // Reverse order of bytes for NimBLEAddress
   byte addressBytes[6];
   for (uint8_t i = 0; i < 6; i++) {
-    addressBytes[i] = payload.commisioning.staticSourceAddress[5-i];
+    addressBytes[i] = payload.commissioning.staticSourceAddress[5-i];
   }
 
   BLEAddress address { addressBytes };
   #ifdef DEBUG_COMMISSIONING_DATA
     log_d("Commissioning event  - address: %s", address.toString().c_str());
-    printBuf(payload.commisioning.securityKey, 16, false, "Security Key");
+    printBuf(payload.commissioning.securityKey, 16, false, "Security Key");
   #endif
 
   if (commissioningEventhandler) {
     CommissioningEvent event;
     event.address = address;
-    memcpy(event.securityKey, payload.commisioning.securityKey, 16);
+    memcpy(event.securityKey, payload.commissioning.securityKey, 16);
     commissioningEventhandler->handleEvent(event);
   }
 }
