@@ -29,16 +29,8 @@ void bleScanTask(void* pvParameters) {
   esp_task_wdt_add(NULL);
   while (1) {
     esp_task_wdt_reset();
-    // if (enocean_PTM215bObj->registeredSwitchCount() > 0) {
-      // scan for 1 seconds and then delete results to prevent memory leak if
-      // running for long time and registering different BLE devices
-      pBLEScan->start(1, true);
-      pBLEScan->clearResults();
-    // } else {
-    //   log_w("No switches registered, waiting 3 sec...");
-    //   delay(3000);
-    // }
-    // delay(10);
+    pBLEScan->start(1, true);
+    pBLEScan->clearResults();
   }
 }
 
