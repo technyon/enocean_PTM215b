@@ -44,8 +44,6 @@ public:
 };
 
 
-PtmEventhandler handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(handler, true);
 
 class PtmCommissioninghandler : public PTM215b::CommissioningEventhandler {
 public:
@@ -54,24 +52,28 @@ public:
 
     void handleEvent(PTM215b::CommissioningEvent& evt) override {
       log_d("Commissioning event received");
-      enocean_PTM215b.registerBleSwitch(evt.address, evt.securityKey, 20, 21);
+      // enocean_PTM215b.registerBleSwitch(evt.address, evt.securityKey, 20, 21);
     };
 
 };
 
 PtmCommissioninghandler commHandler;
 
+PtmEventhandler handler{};
+PTM215b::Enocean_PTM215b enocean_PTM215b(handler, false);
 void setup(){
   Serial.begin(115200);
   log_d("Starting Enocean_PTM215b BLE Example application...");
-    
+
+
   NimBLEDevice::init("ESP32_client");
+
   enocean_PTM215b.initialize();
   enocean_PTM215b.setCommissioningEventHandler(&commHandler);
 
-  // log_d("Adding switch");
-  // enocean_PTM215b.registerBleSwitch(BLE_ADDRESS, SECURITY_KEY, 10, 11, &handler);
-  // log_d("Adding switch Done");
+  log_d("Adding switch");
+  enocean_PTM215b.registerBleSwitch(BLE_ADDRESS, SECURITY_KEY, 10, 11);
+  log_d("Adding switch Done");
 
 }
 

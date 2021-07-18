@@ -12,10 +12,10 @@
 #include <map>
 #include <vector>
 
-// #define DEBUG_DATA
-// #define DEBUG_COMMISSIONING_DATA
+#define DEBUG_DATA
+#define DEBUG_COMMISSIONING_DATA
 // #define DEBUG_ENCRYPTION
-// #define DEBUG_REGISTER_CONFIG
+#define DEBUG_REGISTER_CONFIG
 
 // TODO Make configurable
 #define INITIAL_REPEAT_WAIT 1000
@@ -241,7 +241,7 @@ private:
   /**
    * @brief Map of registered switches by BleAddress
    */
-  std::map<BLEAddress, Switch> switches;
+  std::map<NimBLEAddress, Switch> switches;
 
   /**
    * @brief Map of Last events by NodeId

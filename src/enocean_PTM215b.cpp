@@ -56,8 +56,9 @@ void repeatEventsTask(void* pvParameters) {
   }
 }
 
-Enocean_PTM215b::Enocean_PTM215b(Eventhandler& eventhandler, const boolean enableRepeatTask)
-    : eventHandler(eventHandler), enableRepeatTask(enableRepeatTask) {}
+Enocean_PTM215b::Enocean_PTM215b(Eventhandler& handler, const boolean enableRepeatTask)
+    : eventHandler(handler), enableRepeatTask(enableRepeatTask) {
+    }
 
 Enocean_PTM215b::~Enocean_PTM215b() {
   if (repeatEventsTaskHandle)
@@ -124,12 +125,11 @@ void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
 
   NimBLEAddress bleAddress = advertisedDevice->getAddress();
   Payload payload = getPayload(advertisedDevice);
+
   if ((payload.type != ENOCEAN_PAYLOAD_TYPE) || (memcmp(payload.manufacturerId, ENOCEAN_PAYLOAD_MANUFACTURER, sizeof(ENOCEAN_PAYLOAD_MANUFACTURER)) != 0)) {
-    #ifdef DEBUG_PTM215
-      log_d("Unknown payloadtype or manufacturerId");
-      return;
-    #endif    
+    return;
   }
+  printBuf(advertisedDevice->getPayload(), advertisedDevice->getPayloadLength(), false, "BLE Message");
 
   SwitchType type = getTypeFromAddress(bleAddress);
   if (type == SwitchType::PTM215B) {
@@ -147,7 +147,6 @@ Enocean_PTM215b::Payload Enocean_PTM215b::getPayload(NimBLEAdvertisedDevice* adv
   // Pointer to first byte of payload to read next
   uint8_t* nextPayload = advertisedDevice->getPayload();
 
-  printBuf(advertisedDevice->getPayload(), advertisedDevice->getPayloadLength(), false, "BLE Message");
   memcpy(&payload, advertisedDevice->getPayload(), 8);
   nextPayload = nextPayload + 8;
 
@@ -185,8 +184,8 @@ void Enocean_PTM215b::handleDataPayload(NimBLEAddress& bleAddress, Payload& payl
     log_d("BLE address: %s", bleAddress.toString().c_str());
     printBuf((byte*)payload.manufacturerId, 2, false, "PayloadManufacturerId");
     log_d("PayloadseqCounter: %d", payload.sequenceCounter);
-    log_d("PayloadSwitchStatus: %d", payload.switchStatus);
-    printBuf((byte*)payload.receivedSecurityKey, 4, false,
+    log_d("PayloadSwitchStatus: %d", payload.data.switchStatus);
+    printBuf((byte*)payload.data.receivedSecurityKey, 4, false,
              "PayloadsecurityKey");
     log_d("## END data payload ##");
 #endif
@@ -399,8 +398,6 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddre
   suspendRepeatTask(false);
 
   Switch bleSwitch = switches[bleAddress];
-
-  // TODO Allow for simultaneous events on A and B
 
   uint8_t nodeId;
   if (switchStatus & 0b00000010) {
