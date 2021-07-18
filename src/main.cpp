@@ -45,7 +45,7 @@ public:
 
 
 PtmEventhandler handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(true);
+PTM215b::Enocean_PTM215b enocean_PTM215b(handler, true);
 
 class PtmCommissioninghandler : public PTM215b::CommissioningEventhandler {
 public:
@@ -54,7 +54,7 @@ public:
 
     void handleEvent(PTM215b::CommissioningEvent& evt) override {
       log_d("Commissioning event received");
-      enocean_PTM215b.registerBleSwitch(evt.address, evt.securityKey, 20, 21, &handler);
+      enocean_PTM215b.registerBleSwitch(evt.address, evt.securityKey, 20, 21);
     };
 
 };

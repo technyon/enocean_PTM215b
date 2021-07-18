@@ -23,6 +23,25 @@
 
 namespace PTM215b {
 
+  
+struct Switch {
+  uint32_t lastSequenceCounter = 0;
+  uint8_t securityKey[16]      = {0};
+  uint8_t nodeIdA0;
+  uint8_t nodeIdA1;
+  uint8_t nodeIdB0;
+  uint8_t nodeIdB1;
+};
+
+enum class SwitchType {
+  UNKNOWN,
+  PTM215B,
+  PTM535BZ,
+  EMDCB,
+  STM550B
+};
+
+
 enum class EventType {
   Pushed,
   Repeat,
@@ -59,7 +78,8 @@ public:
 
 struct CommissioningEvent {
   BLEAddress address;
-  byte securityKey[16];
+  SwitchType type;
+  byte securityKey[17];
 };
 
 /**
@@ -100,7 +120,7 @@ public:
  */
 class Enocean_PTM215b : public BLEAdvertisedDeviceCallbacks {
 public:
-  Enocean_PTM215b(const boolean enableRepeatTask);
+  Enocean_PTM215b(Eventhandler& eventhandler, const boolean enableRepeatTask);
   virtual ~Enocean_PTM215b();
 
   /**
@@ -143,23 +163,23 @@ public:
    * used in handleSwitchResult)
    * @param nodeIdB Id of device that "belongs" to this switch B rocker (can be
    * used in handleSwitchResult)
-   * @param handler Pointer to an EventHandler that will be called on reception
-   * of events from this switch
    */
   void registerBleSwitch(const std::string bleAddress,
                          const std::string securityKey, const uint8_t nodeIdA,
-                         const uint8_t nodeIdB, Eventhandler* handler);
+                         const uint8_t nodeIdB);
   void registerBleSwitch(const std::string bleAddress,
                          const byte securityKey[16], const uint8_t nodeIdA,
-                         const uint8_t nodeIdB, Eventhandler* handler);
+                         const uint8_t nodeIdB);
   void registerBleSwitch(const std::string bleAddress,
                          const std::string securityKey, const uint8_t nodeIdA0,
                          const uint8_t nodeIdA1, const uint8_t nodeIdB0,
-                         const uint8_t nodeIdB1, Eventhandler* handler);
+                         const uint8_t nodeIdB1);
   void registerBleSwitch(const std::string bleAddress,
                          const byte securityKey[16], const uint8_t nodeIdA0,
                          const uint8_t nodeIdA1, const uint8_t nodeIdB0,
-                         const uint8_t nodeIdB1, Eventhandler* handler);
+                         const uint8_t nodeIdB1);
+
+  void unRegisterAddress(const NimBLEAddress address);
 
   /**
    * @brief Method used by repeatEventstask to generate a repeat event every XXX
@@ -198,16 +218,6 @@ private:
       } commisioning;
     };
   };
-  
-  struct Switch {
-    uint32_t lastSequenceCounter = 0;
-    uint8_t securityKey[16]      = {0};
-    uint8_t nodeIdA0;
-    uint8_t nodeIdA1;
-    uint8_t nodeIdB0;
-    uint8_t nodeIdB1;
-    Eventhandler* eventHandler;
-  };
 
   enum class ActionType {
     Release = 0,
@@ -219,9 +229,9 @@ private:
     Direction direction;
     ActionType actionType;
     uint32_t pushStartTime = 0;
-    Eventhandler* eventHandler;
   };
 
+  Eventhandler& eventHandler;
   boolean enableRepeatTask;
   TaskHandle_t repeatEventsTaskHandle = nullptr;
   TaskHandle_t bleScanTaskHandle      = nullptr;
@@ -279,7 +289,7 @@ private:
    * @param bleAddress BLE address of switch sending commissioning data
    * @param payload
    */
-  void handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload);
+  void handleCommissioningPayload(NimBLEAddress& bleAddress, Payload& payload);
 
   /**
    * @brief Checks with AES128 encryption is sent security key is correct
@@ -295,6 +305,8 @@ private:
    * @param bleAddress BLE address of the switch
    */
   void handleSwitchAction(const uint8_t switchStatus, BLEAddress& bleAddress);
+
+  SwitchType getTypeFromAddress(const NimBLEAddress& address);
 };
 
 } // namespace PTM215b

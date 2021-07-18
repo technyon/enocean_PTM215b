@@ -56,8 +56,8 @@ void repeatEventsTask(void* pvParameters) {
   }
 }
 
-Enocean_PTM215b::Enocean_PTM215b(const boolean enableRepeatTask)
-    : enableRepeatTask(enableRepeatTask) {}
+Enocean_PTM215b::Enocean_PTM215b(Eventhandler& eventhandler, const boolean enableRepeatTask)
+    : eventHandler(eventHandler), enableRepeatTask(enableRepeatTask) {}
 
 Enocean_PTM215b::~Enocean_PTM215b() {
   if (repeatEventsTaskHandle)
@@ -123,19 +123,20 @@ void Enocean_PTM215b::setRepeatTaskPriority(uint8_t prio) {
 void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
 
   NimBLEAddress bleAddress = advertisedDevice->getAddress();
-  // check that the upper 2 byte of the Static Source Address are 0xE215.
-  // Note NimBLEs getNative() returns byte in reverse order
-  if (memcmp(bleAddress.getNative() + 4, PMT215B_STATIC_SOURCE_ADDRESS, sizeof(PMT215B_STATIC_SOURCE_ADDRESS)) == 0) {
+  Payload payload = getPayload(advertisedDevice);
+  if ((payload.type != ENOCEAN_PAYLOAD_TYPE) || (memcmp(payload.manufacturerId, ENOCEAN_PAYLOAD_MANUFACTURER, sizeof(ENOCEAN_PAYLOAD_MANUFACTURER)) != 0)) {
+    #ifdef DEBUG_PTM215
+      log_d("Unknown payloadtype or manufacturerId");
+      return;
+    #endif    
+  }
 
-    Payload payload = getPayload(advertisedDevice);
-
-    // check that GAP AD Type is 0xFF and for correct manufacturer id
-    if ((payload.type == PMT215B_PAYLOAD_TYPE) && (memcmp(payload.manufacturerId, PMT215B_PAYLOAD_MANUFACTURER, sizeof(PMT215B_PAYLOAD_MANUFACTURER)) == 0)) {
-      if (payload.payloadType == Data) {
-        handleDataPayload(bleAddress, payload);
-      } else {
-        handleCommissioningPayload(bleAddress, payload);
-      }
+  SwitchType type = getTypeFromAddress(bleAddress);
+  if (type == SwitchType::PTM215B) {
+    if (payload.payloadType == Data) {
+      handleDataPayload(bleAddress, payload);
+    } else {
+      handleCommissioningPayload(bleAddress, payload);
     }
   }
 }
@@ -297,7 +298,7 @@ bool Enocean_PTM215b::securityKeyValid(NimBLEAddress& bleAddress, Payload& paylo
   }
 }
 
-void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload& payload) {
+void Enocean_PTM215b::handleCommissioningPayload(NimBLEAddress& bleAddress, Payload& payload) {
   if (lastCommissioningCounter == payload.sequenceCounter) {
     // discard repeated messages
     return;
@@ -310,7 +311,7 @@ void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload
     addressBytes[i] = payload.commisioning.staticSourceAddress[5-i];
   }
 
-  BLEAddress address { addressBytes };
+  NimBLEAddress address { addressBytes };
   #ifdef DEBUG_COMMISSIONING_DATA
     log_d("Commissioning event  - address: %s", address.toString().c_str());
     printBuf(payload.commisioning.securityKey, 16, false, "Security Key");
@@ -319,7 +320,9 @@ void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload
   if (commissioningEventhandler) {
     CommissioningEvent event;
     event.address = address;
+    event.type = getTypeFromAddress(address);
     memcpy(event.securityKey, payload.commisioning.securityKey, 16);
+    event.securityKey[16] = 0; // Add char terminator
     commissioningEventhandler->handleEvent(event);
   }
 }
@@ -327,39 +330,36 @@ void Enocean_PTM215b::handleCommissioningPayload(BLEAddress& bleAddress, Payload
 void Enocean_PTM215b::registerBleSwitch(std::string bleAddress,
                                         const std::string securityKey,
                                         const uint8_t nodeIdA,
-                                        const uint8_t nodeIdB,
-                                        Eventhandler* handler) {
-  registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdA, nodeIdB, nodeIdB, handler);
+                                        const uint8_t nodeIdB) {
+  registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdA, nodeIdB, nodeIdB);
 }
 
 void Enocean_PTM215b::registerBleSwitch(std::string bleAddress,
                                         const byte securityKey[16],
                                         const uint8_t nodeIdA,
-                                        const uint8_t nodeIdB,
-                                        Eventhandler* handler) {
-  registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdA, nodeIdB, nodeIdB, handler);
+                                        const uint8_t nodeIdB) {
+  registerBleSwitch(bleAddress, securityKey, nodeIdA, nodeIdA, nodeIdB, nodeIdB);
 }
 
 void Enocean_PTM215b::registerBleSwitch(
     const std::string bleAddress, const std::string securityKey,
     const uint8_t nodeIdA0, const uint8_t nodeIdA1, const uint8_t nodeIdB0,
-    const uint8_t nodeIdB1, Eventhandler* handler) {
+    const uint8_t nodeIdB1) {
   
   byte key[16];
   hexStringToByteArray(securityKey, key, 16);
-  registerBleSwitch(bleAddress, key, nodeIdA0, nodeIdA1, nodeIdB0, nodeIdB1, handler);
+  registerBleSwitch(bleAddress, key, nodeIdA0, nodeIdA1, nodeIdB0, nodeIdB1);
  }
 
 void Enocean_PTM215b::registerBleSwitch(
     const std::string bleAddress, const byte securityKey[16],
     const uint8_t nodeIdA0, const uint8_t nodeIdA1, const uint8_t nodeIdB0,
-    const uint8_t nodeIdB1, Eventhandler* handler) {
+    const uint8_t nodeIdB1) {
   Switch bleSwitch;
   bleSwitch.nodeIdA0     = nodeIdA0;
   bleSwitch.nodeIdA1     = nodeIdA1;
   bleSwitch.nodeIdB0     = nodeIdB0;
   bleSwitch.nodeIdB1     = nodeIdB1;
-  bleSwitch.eventHandler = handler;
   memcpy(bleSwitch.securityKey, securityKey, 16);
 
   NimBLEAddress address{bleAddress};
@@ -377,6 +377,10 @@ void Enocean_PTM215b::registerBleSwitch(
   log_d("## END Register BLE switch ##");
 #endif
 #endif
+}
+
+void Enocean_PTM215b::unRegisterAddress(const NimBLEAddress address) {
+  switches.erase(address);
 }
 
 void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddress& bleAddress) {
@@ -431,7 +435,6 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddre
   action.nodeId       = nodeId;
   action.actionType   = type;
   action.direction    = direction;
-  action.eventHandler = bleSwitch.eventHandler;
 
   SwitchEvent event;
   event.nodeId    = nodeId;
@@ -444,13 +447,13 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddre
     } else {
       event.eventType = EventType::ReleaseLong;
     }
-    bleSwitch.eventHandler->handleEvent(event);
+    eventHandler.handleEvent(event);
     actions.erase(nodeId);
   } else {
     action.pushStartTime = millis();
     actions[nodeId]      = action;
     event.eventType      = EventType::Pushed;
-    bleSwitch.eventHandler->handleEvent(event);
+    eventHandler.handleEvent(event);
   }
 }
 
@@ -462,9 +465,35 @@ void Enocean_PTM215b::generateRepeatEvents() {
       event.nodeId    = action.nodeId;
       event.direction = action.direction;
       event.eventType = EventType::Repeat;
-      action.eventHandler->handleEvent(event);
+      eventHandler.handleEvent(event);
     }
   }
+}
+
+SwitchType Enocean_PTM215b::getTypeFromAddress(const NimBLEAddress& address) {
+  const uint8_t* nativeAddressLSB = address.getNative(); // LSB
+  uint8_t nativeAddress[6];
+  std::reverse_copy(nativeAddressLSB, nativeAddressLSB + 6, nativeAddress);
+
+  if (memcmp(nativeAddress, STM550B_PREFIX_ADDRESS, 2) == 0) {
+    return SwitchType::STM550B;
+  }
+
+  if (memcmp(nativeAddress, EMDCB_PREFIX_ADDRESS, 2) == 0) {
+    return SwitchType::EMDCB;
+  }
+
+  if (memcmp(nativeAddress, PTM215B_PREFIX_ADDRESS, 2) == 0) {
+    if ((nativeAddress[2] & 0xF0) == 1) {
+      return SwitchType::PTM535BZ;
+    }
+
+    if ((nativeAddress[2] & 0xF0) == 0) {
+      return SwitchType::PTM215B;
+    }
+  }
+  log_w("Unknown addressprefix in %s", address.toString().c_str());
+  return SwitchType::UNKNOWN;
 }
 
 } // namespace PTM215b
