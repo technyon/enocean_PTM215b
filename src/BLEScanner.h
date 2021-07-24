@@ -3,9 +3,9 @@
 #include "Arduino.h"
 #include "DataTypes.h"
 #include "NimBLEDevice.h"
+#include "PTM215EventAdapter.h"
 #include "enocean_Constants.h"
 #include <map>
-#include <vector>
 
 namespace Enocean {
 
@@ -72,7 +72,15 @@ private:
   TaskHandle_t bleScanTaskHandle                       = nullptr;
   CommissioningEventhandler* commissioningEventhandler = nullptr;
   uint32_t lastCommissioningCounter                    = 0;
+  /**
+   * @brief Address of currently active commissioning event
+   * 
+   * If 0 then no commissioning is active
+   * 
+   */
+  NimBLEAddress activeCommissioningAddress{};
 
+  PTM215EventAdapter ptm215Adapter;
   /**
    * @brief Map of registered devices by BleAddress
    */

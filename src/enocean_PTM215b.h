@@ -12,9 +12,9 @@
 #include <map>
 #include <vector>
 
-// #define DEBUG_DATA
+#define DEBUG_DATA
 // #define DEBUG_COMMISSIONING_DATA
-// #define DEBUG_ENCRYPTION
+#define DEBUG_ENCRYPTION
 // #define DEBUG_REGISTER_CONFIG
 
 // TODO Make configurable

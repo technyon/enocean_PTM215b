@@ -1,5 +1,6 @@
 
 #include "BLEScanner.h"
+#include "PTM215EventAdapter.h"
 #include "esp_task_wdt.h"
 #include "mbedtls/aes.h"
 #include <algorithm>
@@ -66,8 +67,7 @@ void BLEScanner::setScanTaskPriority(uint8_t prio) {
 }
 
 void BLEScanner::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
-  NimBLEAddress bleAddress = advertisedDevice->getAddress();
-  Payload payload          = getPayload(advertisedDevice);
+  Payload payload = getPayload(advertisedDevice);
 
   if ((payload.type != ENOCEAN_PAYLOAD_TYPE) || (memcmp(payload.manufacturerId, ENOCEAN_PAYLOAD_MANUFACTURER, sizeof(ENOCEAN_PAYLOAD_MANUFACTURER)) != 0)) {
     return;
@@ -77,6 +77,7 @@ void BLEScanner::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
   log_d("Enocean event received from %s", advertisedDevice->getAddress().toString().c_str());
 #endif
 
+  NimBLEAddress bleAddress = advertisedDevice->getAddress();
   if (payload.payloadType == PayloadType::Commissioning) {
     handleCommissioningPayload(bleAddress, payload);
   } else {
@@ -94,44 +95,72 @@ Payload BLEScanner::getPayload(NimBLEAdvertisedDevice* advertisedDevice) {
   memcpy(&payload, advertisedDevice->getPayload(), 8);
   nextPayload = nextPayload + 8;
 
-  DeviceType deviceType = getTypeFromAddress(advertisedDevice->getAddress());
-  if (deviceType == DeviceType::UNKNOWN) {
+  payload.deviceType = getTypeFromAddress(advertisedDevice->getAddress());
+  if (payload.deviceType == DeviceType::UNKNOWN) {
+    // Return incomplete payload, should be handled in caller
     return payload;
   }
-
+  
   if (payload.len == 29) {
     payload.payloadType = PayloadType::Commissioning;
     memcpy(&payload.commissioning, nextPayload, payload.len - 7);
   } else {
+    uint8_t dataLen = payload.len - 11;
     payload.payloadType = PayloadType::Data;
-    memcpy(&payload.data, nextPayload, payload.len - 7);
+    memcpy(&payload.data.raw, nextPayload, dataLen);
+    memcpy(&payload.data.signature, nextPayload + dataLen, 4);
   }
-
   return payload;
 }
 
 void BLEScanner::handleDataPayload(NimBLEAddress& bleAddress, Payload& payload) {
+  if (activeCommissioningAddress == bleAddress) {
+    // Data event received from active commissioning address -> end commissioning mode
+    activeCommissioningAddress = NimBLEAddress();
+  }
+
   if (devices.count(bleAddress)) {
-    devices[bleAddress].handler->handlePayload(payload);
+    Device device = devices[bleAddress];
+    if (device.lastSequenceCounter < payload.sequenceCounter) {
+      devices[bleAddress].lastSequenceCounter = payload.sequenceCounter;
+      switch (payload.deviceType) {
+        case DeviceType::PTM215B: {
+          // Note that devices address is stored for repeat events, so don't use local var device
+          ptm215Adapter.handlePayload(devices[bleAddress], payload);
+          break;
+        }
+
+        default: {
+          break;
+        }
+      }
+    }
   }
 }
 
 void BLEScanner::handleCommissioningPayload(NimBLEAddress& bleAddress, Payload& payload) {
-  if (lastCommissioningCounter == payload.sequenceCounter) {
+  if ((uint64_t)activeCommissioningAddress == 0) {
+    activeCommissioningAddress = bleAddress;
+  } else if (activeCommissioningAddress != bleAddress) {
+    log_w("Ignored commissioning for %s, already active for %s", bleAddress, activeCommissioningAddress);
+    return;
+  }
+
+  if (lastCommissioningCounter >= payload.sequenceCounter) {
     // discard repeated messages
     return;
   }
-  lastCommissioningCounter = payload.sequenceCounter;
-
-  // Reverse order of bytes for NimBLEAddress
-  byte addressBytes[6];
-  for (uint8_t i = 0; i < 6; i++) {
-    addressBytes[i] = payload.commissioning.staticSourceAddress[5 - i];
-  }
-
-  NimBLEAddress address{addressBytes};
 
   if (commissioningEventhandler) {
+    lastCommissioningCounter = payload.sequenceCounter;
+    // Reverse order of bytes for NimBLEAddress
+    byte addressBytes[6];
+    for (uint8_t i = 0; i < 6; i++) {
+      addressBytes[i] = payload.commissioning.staticSourceAddress[5 - i];
+    }
+
+    NimBLEAddress address{addressBytes};
+
     CommissioningEvent event;
     event.address = address;
     event.type    = getTypeFromAddress(address);
@@ -152,6 +181,7 @@ void BLEScanner::registerDevice(const std::string bleAddress, const byte securit
   memcpy(device.securityKey, securityKey, 16);
   device.handler = handler;
   NimBLEAddress address{bleAddress};
+  device.address   = address;
   devices[address] = device;
 }
 

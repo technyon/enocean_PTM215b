@@ -1,4 +1,5 @@
 #pragma once
+#include "Arduino.h"
 #include "NimBLEAddress.h"
 
 namespace Enocean {
@@ -39,10 +40,11 @@ class PayloadHandler {
 public:
   PayloadHandler(){};
   virtual ~PayloadHandler(){};
-  virtual void handlePayload(Payload&) = 0;
+  virtual void handleEvent(DeviceType type, void* event) = 0; //untyped for now, need to handle events from different devices
 };
 
 struct Device {
+  NimBLEAddress address;
   uint8_t securityKey[16]      = {0};
   uint32_t lastSequenceCounter = 0;
   DeviceType type;

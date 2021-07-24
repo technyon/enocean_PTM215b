@@ -7,8 +7,11 @@ class Handler : public Enocean::PayloadHandler {
 public:
   Handler() {};
 
-  void handlePayload(Enocean::Payload& payload) override {
-    log_d("Handling Payload");
+  void handleEvent(Enocean::DeviceType type, void* event) override {
+    log_d("Handling Event");
+    log_d("Devicetype: %d", type);
+    Enocean::PTM215Event evt = *(Enocean::PTM215Event*)event;
+   log_d("Event: dir %d type %d", evt.direction, evt.eventType);
   }
 };
 
