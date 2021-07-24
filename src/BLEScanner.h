@@ -4,7 +4,7 @@
 #include "DataTypes.h"
 #include "NimBLEDevice.h"
 #include "PTM215EventAdapter.h"
-#include "enocean_Constants.h"
+#include "Constants.h"
 #include <map>
 
 namespace Enocean {
