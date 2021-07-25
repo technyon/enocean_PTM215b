@@ -1,5 +1,5 @@
 #pragma once
-#include "DataTypes.h"
+#include "EnoceanDataTypes.h"
 #include "map"
 
 namespace Enocean {

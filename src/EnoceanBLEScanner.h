@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Arduino.h"
-#include "DataTypes.h"
 #include "NimBLEDevice.h"
-#include "PTM215EventAdapter.h"
-#include "Constants.h"
+#include "EnoceanDataTypes.h"
+#include "EnoceanPTM215EventAdapter.h"
+#include "EnoceanConstants.h"
 #include <map>
 
 namespace Enocean {

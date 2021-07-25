@@ -1,6 +1,6 @@
 
-#include "BLEScanner.h"
-#include "PTM215EventAdapter.h"
+#include "EnoceanBLEScanner.h"
+#include "EnoceanPTM215EventAdapter.h"
 #include "esp_task_wdt.h"
 #include "mbedtls/aes.h"
 #include <algorithm>
@@ -131,6 +131,7 @@ void BLEScanner::handleDataPayload(NimBLEAddress& bleAddress, Payload& payload) 
         }
 
         default: {
+          log_w("Devicetype [%d] adapter not implemented", payload.deviceType);
           break;
         }
       }

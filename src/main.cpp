@@ -1,4 +1,4 @@
-#include "BLEScanner.h"
+#include "EnoceanBLEScanner.h"
 
 #define BLE_ADDRESS "E2:15:00:00:D4:AD"
 #define SECURITY_KEY "8B49C1B3C62DAE598DCFD4C1AFB1956A"
