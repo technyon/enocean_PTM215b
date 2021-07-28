@@ -121,7 +121,7 @@ void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
   if ((payload.type != ENOCEAN_PAYLOAD_TYPE) || (memcmp(payload.manufacturerId, ENOCEAN_PAYLOAD_MANUFACTURER, sizeof(ENOCEAN_PAYLOAD_MANUFACTURER)) != 0)) {
     return;
   }
-  printBuf(advertisedDevice->getPayload(), advertisedDevice->getPayloadLength(), false, "BLE Message");
+  printBuf(advertisedDevice->getPayload(), advertisedDevice->getPayloadLength(), false, "Enocean payload Message");
 
   SwitchType type = getTypeFromAddress(bleAddress);
   if (type == SwitchType::PTM215B) {
@@ -418,16 +418,28 @@ void Enocean_PTM215b::handleSwitchAction(const uint8_t switchStatus, NimBLEAddre
     return;
   }
 
+  Button button = Button::NONE;
+  if (switchStatus & 0b00000110) {
+    button = direction == Direction::Up ? Button::A_UP : Button::A_DOWN;
+  } else if (switchStatus & 0b00011000) {
+    button = direction == Direction::Up ? Button::B_UP : Button::B_DOWN;
+  } else {
+    log_e("Invalid switchStatus [0x%02X]", switchStatus);
+    suspendRepeatTask(true);
+    return;
+  }
+
+
   ActionType type = (ActionType)(switchStatus & 0x01);
 
   SwitchAction action;
   action.nodeId       = nodeId;
   action.actionType   = type;
-  action.direction    = direction;
+  action.button       = button;
 
   SwitchEvent event;
   event.nodeId    = nodeId;
-  event.direction = direction;
+  event.button    = button;
 
   if (type == ActionType::Release) {
     suspendRepeatTask(true);
@@ -452,7 +464,7 @@ void Enocean_PTM215b::generateRepeatEvents() {
     if (millis() - INITIAL_REPEAT_WAIT > action.pushStartTime) {
       SwitchEvent event;
       event.nodeId    = action.nodeId;
-      event.direction = action.direction;
+      event.button    = action.button;
       event.eventType = EventType::Repeat;
       eventHandler.handleEvent(event);
     }

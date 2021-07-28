@@ -58,13 +58,21 @@ enum class Direction {
   Up
 };
 
+enum class Button : uint8_t {
+  NONE = 0,
+  A_UP, 
+  A_DOWN, 
+  B_UP,
+  B_DOWN
+};
+
 /**
  * @brief Event send to registered eventhandler
  *
  */
 struct SwitchEvent {
   uint8_t nodeId;
-  Direction direction;
+  Button button;
   EventType eventType;
 };
 
@@ -226,7 +234,7 @@ private:
 
   struct SwitchAction {
     uint8_t nodeId;
-    Direction direction;
+    Button button;
     ActionType actionType;
     uint32_t pushStartTime = 0;
   };

@@ -36,9 +36,7 @@ public:
         break;
       }
 
-      std::string direction = (evt.direction == PTM215b::Direction::Up) ? "Up" : "Down";
-
-      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s, Direction: %s", evt.nodeId, type.c_str(), direction.c_str());
+      log_d("BleSwitchEvent Received: Node Id: %d, Type: %s", evt.nodeId, type.c_str());
     };
 
 };
