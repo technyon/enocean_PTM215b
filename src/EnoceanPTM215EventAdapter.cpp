@@ -1,9 +1,9 @@
-#include "EnoceanPTM215EventAdapter.h"
+#include "EnOceanPTM215EventAdapter.h"
 #include "esp_task_wdt.h"
 #include "mbedtls/aes.h"
 #include <algorithm>
 
-namespace Enocean {
+namespace EnOcean {
 
 void repeatEventsTask(void* pvParameters) {
 #ifdef DEBUG_ENOCEAN
@@ -195,4 +195,4 @@ void PTM215EventAdapter::generateRepeatEvents() {
   }
 }
 
-} // namespace Enocean
+} // namespace EnOcean

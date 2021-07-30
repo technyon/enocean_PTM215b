@@ -1,4 +1,4 @@
-# Enocean_PTM215b
+# EnOcean_PTM215b
 
 This library provides an implementation for an EnOcean PTM215b selfpowered BLE switch on a ESP32 based MCU
 
@@ -8,7 +8,7 @@ https://www.enocean.com/en/products/enocean_modules_24ghz_ble/ptm-215b/
 ## Hardware
 Hardware supported:
 * Tested on an ESP32wroom
-* Enocean PTM215B selfpowered BLE switch
+* EnOcean PTM215B selfpowered BLE switch
 
 
 ## Development
@@ -30,7 +30,7 @@ All classes are defined within the namespace `PTM215b`.
 * Add dependency to `I-Connect/enocean_PTM215b` to your project
 * Add `#include "enocean_PMT215b.h"`
 * Create an instance of the derived Eventhandler class
-* Create an instance of the `Enocean_PTM215b` class
+* Create an instance of the `EnOcean_PTM215b` class
 * Initialize BLEDevice
 * Define an Eventhandler class implementing the `PTM215b::Eventhandler` interface
 * Register switches with `BLEAddress`, 32 character `SecurityKey`, **NodeIds** and a pointer to the eventhandler

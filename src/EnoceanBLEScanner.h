@@ -2,23 +2,23 @@
 
 #include "Arduino.h"
 #include "NimBLEDevice.h"
-#include "EnoceanDataTypes.h"
-#include "EnoceanPTM215EventAdapter.h"
-#include "EnoceanConstants.h"
+#include "EnOceanDataTypes.h"
+#include "EnOceanPTM215EventAdapter.h"
+#include "EnOceanConstants.h"
 #include <map>
 
-namespace Enocean {
+namespace EnOcean {
 
 /**
  * @brief Class handling BLE advertisement messages received from multiple
- * Enocean devices
+ * EnOcean devices
  *
  * The class works by starting a background taks which will scan for BLE
  * advertising events By deriving from BLEAdvertisedDeviceCallBack the class can
- * be used in a ble scan task which will call Enocean_PTM251b.onResult() method
+ * be used in a ble scan task which will call EnOcean_PTM251b.onResult() method
  * when a message is received
  *
- * Enocean devices need to be registered to this class using registerDevice methods,
+ * EnOcean devices need to be registered to this class using registerDevice methods,
  * which links the BLE address to a handler which will be called on
  * reception of an event on that BLE address
  *
@@ -57,7 +57,7 @@ public:
   }
 
   /**
-   * @brief Register an Enocean device
+   * @brief Register an EnOcean device
    *
    * @param bleAddress BLE address of switch being handled
    * @param securityKey Security key retreived from QR code, NFC or commissioning data
@@ -94,7 +94,7 @@ private:
 
   /**
    * @brief Implementation of BLEAdvertisedDeviceCallbacks to handle advertisement events. Checks
-   * manufacturer specific data if it is an Enocean switch and calls payloadHandler() of the
+   * manufacturer specific data if it is an EnOcean switch and calls payloadHandler() of the
    * registered PayloadHandler 
    *
    * @param advertisedDevice Holds BLE address and payload
@@ -129,4 +129,4 @@ private:
   DeviceType getTypeFromAddress(const NimBLEAddress& address);
 };
 
-} // namespace Enocean
+} // namespace EnOcean

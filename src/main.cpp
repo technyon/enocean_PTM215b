@@ -1,28 +1,28 @@
-#include "EnoceanBLEScanner.h"
+#include "EnOceanBLEScanner.h"
 
 #define BLE_ADDRESS "E2:15:00:00:D4:AD"
 #define SECURITY_KEY "8B49C1B3C62DAE598DCFD4C1AFB1956A"
 
-class Handler : public Enocean::PayloadHandler {
+class Handler : public EnOcean::PayloadHandler {
 public:
   Handler() {};
 
-  void handleEvent(Enocean::DeviceType type, void* event) override {
+  void handleEvent(EnOcean::DeviceType type, void* event) override {
     log_d("Handling Event");
     log_d("Devicetype: %d", type);
-    Enocean::PTM215Event evt = *(Enocean::PTM215Event*)event;
+    EnOcean::PTM215Event evt = *(EnOcean::PTM215Event*)event;
    log_d("Event: dir %d type %d", evt.direction, evt.eventType);
   }
 };
 
 
 
-Enocean::BLEScanner scanner;
+EnOcean::BLEScanner scanner;
 Handler handler;
 
 void setup(){
   Serial.begin(115200);
-  log_d("Starting Enocean BLE Example application...");
+  log_d("Starting EnOcean BLE Example application...");
 
   NimBLEDevice::init("ESP32_client");
 

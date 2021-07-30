@@ -1,8 +1,8 @@
 #pragma once
-#include "EnoceanDataTypes.h"
+#include "EnOceanDataTypes.h"
 #include "map"
 
-namespace Enocean {
+namespace EnOcean {
 
 // TODO Make configurable
 #define INITIAL_REPEAT_WAIT 1000
@@ -63,4 +63,4 @@ private:
   bool isRepeatTaskSuspended();
 };
   
-} // namespace Enocean
+} // namespace EnOcean

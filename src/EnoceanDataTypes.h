@@ -2,7 +2,7 @@
 #include "Arduino.h"
 #include "NimBLEAddress.h"
 
-namespace Enocean {
+namespace EnOcean {
 
 enum class PayloadType {
   Data,
@@ -72,4 +72,4 @@ public:
   virtual void handleEvent(CommissioningEvent& evt) = 0;
 };
 
-} // namespace Enocean
+} // namespace EnOcean

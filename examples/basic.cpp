@@ -1,5 +1,5 @@
 /**
- * A BLE client example to receive events from an Enocean PTM215b switch
+ * A BLE client example to receive events from an EnOcean PTM215b switch
  * 
  * 
  * author Jeroen
@@ -47,11 +47,11 @@ public:
 };
 
 EH handler;
-PTM215b::Enocean_PTM215b enocean_PTM215b(true);
+PTM215b::EnOcean_PTM215b enocean_PTM215b(true);
 
 void setup(){
   Serial.begin(115200);
-  log_d("Starting Enocean_PTM215b BLE Example application...");
+  log_d("Starting EnOcean_PTM215b BLE Example application...");
     
   BLEDevice::init("ESP32_client");
   enocean_PTM215b.initialize();

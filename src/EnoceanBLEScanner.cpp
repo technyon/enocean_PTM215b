@@ -1,17 +1,17 @@
 
-#include "EnoceanBLEScanner.h"
-#include "EnoceanPTM215EventAdapter.h"
+#include "EnOceanBLEScanner.h"
+#include "EnOceanPTM215EventAdapter.h"
 #include "esp_task_wdt.h"
 #include "mbedtls/aes.h"
 #include <algorithm>
 
 // #define CONFIG_BT_NIMBLE_PINNED_TO_CORE 1
 
-namespace Enocean {
+namespace EnOcean {
 
 void bleScanTask(void* pvParameters) {
 #ifdef DEBUG_ENOCEAN
-  log_d("TASK: Enocean BLE scan task started on core: %d", xPortGetCoreID());
+  log_d("TASK: EnOcean BLE scan task started on core: %d", xPortGetCoreID());
 #endif
   //TODO implement watchdog? Is triggered by the blocking start call below
   BLEScanner* scanner  = static_cast<BLEScanner*>(pvParameters);
@@ -51,7 +51,7 @@ void BLEScanner::initialize() {
 }
 
 void BLEScanner::startTasks() {
-  xTaskCreatePinnedToCore(&bleScanTask, "EnoceanScanTask", 4096, this, 1, &bleScanTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
+  xTaskCreatePinnedToCore(&bleScanTask, "EnOceanScanTask", 4096, this, 1, &bleScanTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
 }
 
 bool BLEScanner::isSuspended(TaskHandle_t taskHandle) {
@@ -74,7 +74,7 @@ void BLEScanner::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
   }
 
 #ifdef DEBUG_ENOCEAN
-  log_d("Enocean event received from %s", advertisedDevice->getAddress().toString().c_str());
+  log_d("EnOcean event received from %s", advertisedDevice->getAddress().toString().c_str());
 #endif
 
   NimBLEAddress bleAddress = advertisedDevice->getAddress();
@@ -215,4 +215,4 @@ DeviceType BLEScanner::getTypeFromAddress(const NimBLEAddress& address) {
   return DeviceType::UNKNOWN;
 }
 
-} // namespace Enocean
+} // namespace EnOcean
