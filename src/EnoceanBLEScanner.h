@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Arduino.h"
-#include "NimBLEDevice.h"
+#include "EnOceanConstants.h"
 #include "EnOceanDataTypes.h"
 #include "EnOceanPTM215EventAdapter.h"
-#include "EnOceanConstants.h"
+#include "NimBLEDevice.h"
 #include <map>
+
 
 namespace EnOcean {
 
@@ -63,8 +64,8 @@ public:
    * @param securityKey Security key retreived from QR code, NFC or commissioning data
    * @param handler PayloadHandler that will be called on receipt of an event on the bleAddress
    */
-  void registerDevice(const std::string bleAddress, const std::string securityKey, PayloadHandler* handler);
-  void registerDevice(const std::string bleAddress, const byte securityKey[16], PayloadHandler* handler);
+  void registerPTM215Device(const std::string bleAddress, const std::string securityKey, PTM215EventHandler* handler,
+                            bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
 
   void unRegisterAddress(const NimBLEAddress address);
 
@@ -81,6 +82,9 @@ private:
   NimBLEAddress activeCommissioningAddress{};
 
   PTM215EventAdapter ptm215Adapter;
+
+  Device registerDevice(const std::string bleAddress, const std::string securityKey);
+  Device registerDevice(const std::string bleAddress, const byte securityKey[16]);
   /**
    * @brief Map of registered devices by BleAddress
    */

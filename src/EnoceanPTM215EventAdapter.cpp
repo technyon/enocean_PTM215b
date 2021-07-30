@@ -25,19 +25,37 @@ PTM215EventAdapter::~PTM215EventAdapter() {
   }
 }
 
+void PTM215EventAdapter::registerHandler(Device& device, PTM215EventHandler* handler, bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1) {
+  HandlerRegistration reg;
+  reg.address    = device.address;
+  reg.handler    = handler;
+  reg.buttons[0] = buttonA0;
+  reg.buttons[1] = buttonA1;
+  reg.buttons[2] = buttonB0;
+  reg.buttons[3] = buttonB1;
+  handlers.push_back(reg);
+}
+
 void PTM215EventAdapter::handlePayload(Device& device, Payload& payload) {
   if (securityKeyValid(device, payload)) {
     PTM215Event ptm215Event = mapToPTM215Event(device, payload);
     manageEventList(ptm215Event);
+    callEventHandlers(ptm215Event);
+  }
+}
 
-    device.handler->handleEvent(DeviceType::PTM215B, (void*)&ptm215Event);
+void PTM215EventAdapter::callEventHandlers(PTM215Event& event) {
+  for (auto const& reg : handlers) {
+    if ((reg.address == event.device->address) && reg.buttons[(uint8_t)event.button]) {
+      reg.handler->handleEvent(event);
+    }
   }
 }
 
 void PTM215EventAdapter::manageEventList(PTM215Event& event) {
   NimBLEAddress address = event.device->address;
   if (event.eventType == EventType::Pushed) {
-    lastEvents[address]  = event;
+    lastEvents[address] = event;
   } else if ((event.eventType == EventType::ReleaseShort) || (event.eventType == EventType::ReleaseLong)) {
     lastEvents.erase(address);
   }
@@ -47,13 +65,12 @@ void PTM215EventAdapter::manageEventList(PTM215Event& event) {
   } else {
     suspendRepeatTask();
   }
-
 }
 
 void PTM215EventAdapter::startRepeatTask() {
   if (!repeatEventsTaskHandle) {
     xTaskCreatePinnedToCore(&repeatEventsTask, "PMT215RepeatTask", 4096, this, 1, &repeatEventsTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
-  } 
+  }
 
   if (isRepeatTaskSuspended()) {
     vTaskResume(repeatEventsTaskHandle);
@@ -159,17 +176,22 @@ bool PTM215EventAdapter::securityKeyValid(Device& device, Payload& payload) {
 
 PTM215Event PTM215EventAdapter::mapToPTM215Event(Device& device, Payload& payload) {
   PTM215Event event;
-  uint8_t switchStatus = payload.data.raw[0];
+  const uint8_t switchStatus = payload.data.raw[0];
 
-  Direction direction;
-  if (switchStatus & 0b00001010) {
-    direction = Direction::Up;
-  } else { 
-    direction = Direction::Down;
-  }
-  
   event.device = &device;
-  event.direction = direction;
+
+  Button button;
+  if (switchStatus & 0b00010000) {
+    button = Button::ButtonB1;
+  } else if (switchStatus & 0b00001000) {
+    button = Button::ButtonB0;
+  } else if (switchStatus & 0b00000100) {
+    button = Button::ButtonA1;
+  } else {
+    button = Button::ButtonA0;
+  }
+
+  event.button = button;
 
   if ((switchStatus & 0x01) == 0) { // release
     if ((lastEvents.count(device.address) == 0) || (millis() - INITIAL_REPEAT_WAIT < lastEvents[device.address].pushStartTime)) {
@@ -178,7 +200,7 @@ PTM215Event PTM215EventAdapter::mapToPTM215Event(Device& device, Payload& payloa
       event.eventType = EventType::ReleaseLong;
     }
   } else { // push
-    event.eventType      = EventType::Pushed;
+    event.eventType     = EventType::Pushed;
     event.pushStartTime = millis();
   }
 
@@ -190,7 +212,7 @@ void PTM215EventAdapter::generateRepeatEvents() {
     PTM215Event event = pair.second;
     if (millis() - INITIAL_REPEAT_WAIT > event.pushStartTime) {
       pair.second.eventType = EventType::Repeat;
-      event.device->handler->handleEvent(DeviceType::PTM215B, (void*)&pair.second);
+      callEventHandlers(pair.second);
     }
   }
 }

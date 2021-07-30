@@ -36,11 +36,12 @@ struct Payload {
   };
 };
 
+template<typename T>
 class PayloadHandler {
 public:
   PayloadHandler(){};
   virtual ~PayloadHandler(){};
-  virtual void handleEvent(DeviceType type, void* event) = 0; //untyped for now, need to handle events from different devices
+  virtual void handleEvent(DeviceType type, T* event) = 0; //untyped for now, need to handle events from different devices
 };
 
 struct Device {
@@ -48,7 +49,6 @@ struct Device {
   uint8_t securityKey[16]      = {0};
   uint32_t lastSequenceCounter = 0;
   DeviceType type;
-  PayloadHandler* handler;
 };
 
 struct CommissioningEvent {

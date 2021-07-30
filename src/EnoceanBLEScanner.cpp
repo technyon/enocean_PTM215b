@@ -100,12 +100,12 @@ Payload BLEScanner::getPayload(NimBLEAdvertisedDevice* advertisedDevice) {
     // Return incomplete payload, should be handled in caller
     return payload;
   }
-  
+
   if (payload.len == 29) {
     payload.payloadType = PayloadType::Commissioning;
     memcpy(&payload.commissioning, nextPayload, payload.len - 7);
   } else {
-    uint8_t dataLen = payload.len - 11;
+    uint8_t dataLen     = payload.len - 11;
     payload.payloadType = PayloadType::Data;
     memcpy(&payload.data.raw, nextPayload, dataLen);
     memcpy(&payload.data.signature, nextPayload + dataLen, 4);
@@ -171,19 +171,25 @@ void BLEScanner::handleCommissioningPayload(NimBLEAddress& bleAddress, Payload& 
   }
 }
 
-void BLEScanner::registerDevice(const std::string bleAddress, const std::string securityKey, PayloadHandler* handler) {
+Device BLEScanner::registerDevice(const std::string bleAddress, const std::string securityKey) {
   byte key[16];
   hexStringToByteArray(securityKey, key, 16);
-  registerDevice(bleAddress, key, handler);
+  return registerDevice(bleAddress, key);
 }
 
-void BLEScanner::registerDevice(const std::string bleAddress, const byte securityKey[16], PayloadHandler* handler) {
+Device BLEScanner::registerDevice(const std::string bleAddress, const byte securityKey[16]) {
   Device device;
   memcpy(device.securityKey, securityKey, 16);
-  device.handler = handler;
   NimBLEAddress address{bleAddress};
   device.address   = address;
   devices[address] = device;
+  return device;
+}
+
+void BLEScanner::registerPTM215Device(const std::string bleAddress, const std::string securityKey, PTM215EventHandler* handler,
+                                      bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1) {
+  Device device = registerDevice(bleAddress, securityKey);
+  ptm215Adapter.registerHandler(device, handler, buttonA0, buttonA1, buttonB0, buttonB1);
 }
 
 void BLEScanner::unRegisterAddress(const NimBLEAddress address) {
