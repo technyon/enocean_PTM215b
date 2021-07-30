@@ -5,19 +5,22 @@
 
 class Handler : public EnOcean::PTM215EventHandler {
 public:
-  Handler() {};
+  Handler(int id) : id(id) {};
 
   void handleEvent(EnOcean::PTM215Event& event) override {
-    log_d("Handling Event");
+    log_d("Handling Event from %d", id);
     log_d("Devicetype: %d", event.device->address);
     log_d("Event: button %d type %d", event.button, event.eventType);
   }
+
+  int id;
 };
 
 
 
 EnOcean::BLEScanner scanner;
-Handler handler;
+Handler handler(1);
+Handler handler2(2);
 
 void setup(){
   Serial.begin(115200);
@@ -29,6 +32,7 @@ void setup(){
   
   log_d("Adding device");
   scanner.registerPTM215Device(BLE_ADDRESS, SECURITY_KEY, &handler, true, false, true, false);
+  scanner.registerPTM215Device(BLE_ADDRESS, SECURITY_KEY, &handler2, false, true, true, true);
   log_d("Adding device Done");
 
 }
