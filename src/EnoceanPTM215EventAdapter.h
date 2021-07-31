@@ -1,5 +1,6 @@
 #pragma once
 #include "EnOceanDataTypes.h"
+#include "EnOceanPTM215Eventhandler.h"
 #include "bitset"
 #include "map"
 
@@ -10,42 +11,13 @@ namespace EnOcean {
 #define INITIAL_REPEAT_WAIT 1000
 #define REPEAT_INTERVAL 500
 
-enum class EventType : byte {
-  Pushed = 0,
-  Repeat,
-  ReleaseShort,
-  ReleaseLong
-};
-
-enum class Button : byte {
-  ButtonA0 = 0,
-  ButtonA1 = 1,
-  ButtonB0 = 2,
-  ButtonB1 = 3
-};
-
-/**
- * @brief Event send to PTM215 eventhandler
- *
- */
-struct PTM215Event {
-  uint8_t nodeId;
-  Button button;
-  EventType eventType;
-  uint32_t pushStartTime = 0;
-  Device* device;
-};
-
-class PTM215EventHandler {
-public:
-  virtual void handleEvent(PTM215Event& event) = 0;
-};
 
 class PTM215EventAdapter {
 public:
   ~PTM215EventAdapter();
 
   void registerHandler(Device& device, PTM215EventHandler* hander, bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
+  void registerHandler(Device& device, const uint8_t nodeId, bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
   void handlePayload(Device& device, Payload& payload);
 
   /**

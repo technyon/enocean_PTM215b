@@ -11,10 +11,10 @@ enum class PayloadType {
 
 enum class DeviceType {
   UNKNOWN,
-  PTM215B,
-  PTM535BZ,
-  EMDCB,
-  STM550B
+  PTM215B,    // Switches
+  PTM535BZ,   // ??
+  EMDCB,      // Motion detector
+  STM550B     // Multi sensor
 };
 
 struct Payload {
@@ -34,14 +34,6 @@ struct Payload {
       byte staticSourceAddress[6]; // LSB first
     } commissioning;
   };
-};
-
-template<typename T>
-class PayloadHandler {
-public:
-  PayloadHandler(){};
-  virtual ~PayloadHandler(){};
-  virtual void handleEvent(DeviceType type, T* event) = 0; //untyped for now, need to handle events from different devices
 };
 
 struct Device {

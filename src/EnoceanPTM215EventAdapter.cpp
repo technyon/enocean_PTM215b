@@ -25,6 +25,14 @@ PTM215EventAdapter::~PTM215EventAdapter() {
   }
 }
 
+void PTM215EventAdapter::registerHandler(Device& device, const uint8_t nodeId, bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1) {
+  if (ptm215EventHandlerMap.count(nodeId)) {
+    registerHandler(device, ptm215EventHandlerMap[nodeId], buttonA0, buttonA1, buttonB0, buttonB1);
+  } else {
+    log_e("NodeId [%d] not found in ptm215EventHandlerMap", nodeId);
+  }
+}
+
 void PTM215EventAdapter::registerHandler(Device& device, PTM215EventHandler* handler, bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1) {
   HandlerRegistration reg;
   reg.address    = device.address;

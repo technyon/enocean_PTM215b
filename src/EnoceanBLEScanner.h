@@ -32,17 +32,17 @@ public:
   virtual ~BLEScanner();
 
   /**
-   * @brief Set task priorities
+   * @brief Set BLE Scan task priorities
    *
    */
   void setScanTaskPriority(uint8_t prio);
 
   /**
-   * @brief return if task is suspended
+   * @brief return if BLE Scan task is suspended
    *
    * @param taskHandle taskHandle to check
    */
-  bool isSuspended(TaskHandle_t taskHandle);
+  bool isSuspended();
 
   /**
    * @brief Initialize object and start background tasks
@@ -58,13 +58,16 @@ public:
   }
 
   /**
-   * @brief Register an EnOcean device
+   * @brief Register an EnOcean PTM215 device
    *
    * @param bleAddress BLE address of switch being handled
-   * @param securityKey Security key retreived from QR code, NFC or commissioning data
+   * @param securityKey Security key retrieved from QR code, NFC or commissioning data
    * @param handler PayloadHandler that will be called on receipt of an event on the bleAddress
+   * @param buttonXX booleans indicating which of the button A0, A1, B0 and B1 will be handled by this handler
    */
   void registerPTM215Device(const std::string bleAddress, const std::string securityKey, PTM215EventHandler* handler,
+                            bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
+  void registerPTM215Device(const std::string bleAddress, const std::string securityKey, const uint8_t eventHandlerNodeId,
                             bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
 
   void unRegisterAddress(const NimBLEAddress address);

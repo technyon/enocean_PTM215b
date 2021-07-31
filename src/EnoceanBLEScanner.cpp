@@ -54,12 +54,9 @@ void BLEScanner::startTasks() {
   xTaskCreatePinnedToCore(&bleScanTask, "EnOceanScanTask", 4096, this, 1, &bleScanTaskHandle, CONFIG_BT_NIMBLE_PINNED_TO_CORE);
 }
 
-bool BLEScanner::isSuspended(TaskHandle_t taskHandle) {
-  if (taskHandle) {
-    eTaskState state = eTaskGetState(taskHandle);
-    return ((state == eSuspended) || (state == eDeleted));
-  }
-  return false;
+bool BLEScanner::isSuspended() {
+  eTaskState state = eTaskGetState(bleScanTaskHandle);
+  return ((state == eSuspended) || (state == eDeleted));
 }
 
 void BLEScanner::setScanTaskPriority(uint8_t prio) {
@@ -182,8 +179,15 @@ Device BLEScanner::registerDevice(const std::string bleAddress, const byte secur
   memcpy(device.securityKey, securityKey, 16);
   NimBLEAddress address{bleAddress};
   device.address   = address;
+  device.type      = getTypeFromAddress(address);
   devices[address] = device;
   return device;
+}
+
+void BLEScanner::registerPTM215Device(const std::string bleAddress, const std::string securityKey, const uint8_t eventHandlerNodeId,
+                          bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1) {
+  Device device = registerDevice(bleAddress, securityKey);
+  ptm215Adapter.registerHandler(device, eventHandlerNodeId, buttonA0, buttonA1, buttonB0, buttonB1);
 }
 
 void BLEScanner::registerPTM215Device(const std::string bleAddress, const std::string securityKey, PTM215EventHandler* handler,
