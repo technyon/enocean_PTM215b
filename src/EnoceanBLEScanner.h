@@ -3,7 +3,8 @@
 #include "Arduino.h"
 #include "EnOceanConstants.h"
 #include "EnOceanDataTypes.h"
-#include "EnOceanPTM215EventAdapter.h"
+#include "PTM215/EnOceanPTM215EventAdapter.h"
+#include "EMDCB/EnOceanEMDCBEventAdapter.h"
 #include "NimBLEDevice.h"
 #include <map>
 
@@ -85,6 +86,7 @@ private:
   NimBLEAddress activeCommissioningAddress{};
 
   PTM215EventAdapter ptm215Adapter;
+  EMDCBEventAdapter emdcbAdapter;
 
   Device registerDevice(const std::string bleAddress, const std::string securityKey);
   Device registerDevice(const std::string bleAddress, const byte securityKey[16]);

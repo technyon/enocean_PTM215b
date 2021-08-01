@@ -1,6 +1,6 @@
 
 #include "EnOceanBLEScanner.h"
-#include "EnOceanPTM215EventAdapter.h"
+#include "EnOceanUtils.h"
 #include "esp_task_wdt.h"
 #include "mbedtls/aes.h"
 #include <algorithm>
@@ -28,11 +28,6 @@ void bleScanTask(void* pvParameters) {
   }
 }
 
-void hexStringToByteArray(std::string stringInput, byte* output, uint8_t byteLength) {
-  for (uint8_t i = 0; i < byteLength; i++) {
-    output[i] = strtol(stringInput.substr(i * 2, 2).c_str(), NULL, 16);
-  }
-}
 
 BLEScanner::BLEScanner() {
 }
@@ -124,6 +119,10 @@ void BLEScanner::handleDataPayload(NimBLEAddress& bleAddress, Payload& payload) 
         case DeviceType::PTM215B: {
           // Note that devices address is stored for repeat events, so don't use local var device
           ptm215Adapter.handlePayload(devices[bleAddress], payload);
+          break;
+        }
+        case DeviceType::EMDCB: {
+          emdcbAdapter.handlePayload(devices[bleAddress], payload);
           break;
         }
 

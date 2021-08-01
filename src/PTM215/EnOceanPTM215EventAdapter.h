@@ -25,6 +25,7 @@ public:
    *
    */
   void generateRepeatEvents();
+  bool securityKeyValid(Device& device, Payload& payload);
 
 private:
   struct HandlerRegistration {
@@ -37,7 +38,6 @@ private:
   TaskHandle_t repeatEventsTaskHandle = nullptr;
   std::map<NimBLEAddress, PTM215Event> lastEvents;
 
-  bool securityKeyValid(Device& device, Payload& payload);
   void handleSwitchAction(const uint8_t switchStatus, NimBLEAddress& bleAddress);
   PTM215Event mapToPTM215Event(Device& device, Payload& payload);
   void manageEventList(PTM215Event& event);
