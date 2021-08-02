@@ -40,9 +40,9 @@ void setup() {
 
   log_d("Adding devices");
   // register handler for A0 and B0 buttons using pointer to handler
-  scanner->registerPTM215Device(BLE_ADDRESS, SECURITY_KEY, handler1, true, false, true, false);
+  scanner->registerPTM215Device(PTM_BLE_ADDRESS, PTM_SECURITY_KEY, handler1, true, false, true, false);
   // register handler for A1, B0 and B1 buttons, using nodeId of handler
-  scanner->registerPTM215Device(BLE_ADDRESS, SECURITY_KEY, 2, false, true, true, true);
+  scanner->registerPTM215Device(PTM_BLE_ADDRESS, PTM_SECURITY_KEY, 2, false, true, true, true);
   log_i("Initialization done");
   log_i("===========================================");
 }

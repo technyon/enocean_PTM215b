@@ -8,22 +8,23 @@ void hexStringToByteArray(std::string stringInput, byte* output, uint8_t byteLen
   }
 }
 
-std::vector<PayloadVariable> parsePayload(byte* payload, const uint8_t size) {
-  std::vector<PayloadVariable> result;
+std::vector<Parameter> parsePayloadParameters(byte* payload, const uint8_t size) {
+  std::vector<Parameter> result;
   byte* payloadPtr = payload;
-
+  
   while (payloadPtr < payload + size) {
-    PayloadVariable variable;
-    variable.type = *payloadPtr & 0b00111111;
-    uint8_t varSize = 2 ^ (*payloadPtr >> 6); // leftmost 2 bits
+    Parameter parameter;
+    parameter.size = pow(2, *payloadPtr >> 6);                      // leftmost 2 bits
+    parameter.type = (ParameterType)(*payloadPtr & 0b00111111);     // rightmost 6 bits
     payloadPtr++;
-    if (varSize > 4) { // custom size, specified in first byte of data
-      varSize = *payloadPtr++;
-      // TODO read custom size variable, skipped for now
+    if (parameter.size > 4) { // custom size, specified in first byte of data
+      parameter.size = *payloadPtr++;
+      // TODO read custom size parameter, skipped for now
     } else {
-      memcpy(&variable.value, payloadPtr, varSize);
+      memcpy(&parameter.value, payloadPtr, parameter.size);
     }
-    payloadPtr += varSize;
+    payloadPtr += parameter.size;
+    result.push_back(parameter);
   }
   return result;
 }

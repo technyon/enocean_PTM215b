@@ -5,19 +5,7 @@
 #include "map"
 
 namespace EnOcean {
-  
-enum class ParameterType : byte {
-  LightLevel = 0x05,
-  Occupancy = 0x20,
-  BatteryVoltage = 0x01,
-  EnergyLevel = 0x02,
-  LightLevelSolar = 0x04
-};
 
-struct Parameter {
-  ParameterType type;
-  uint32_t value;
-};
 
 struct EMDCBEvent {
   std::vector<Parameter> parameters;

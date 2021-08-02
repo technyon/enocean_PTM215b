@@ -7,8 +7,6 @@
 
 namespace EnOcean {
 
-
-
 class EMDCBEventAdapter {
 public:
   ~EMDCBEventAdapter();

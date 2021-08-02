@@ -43,6 +43,26 @@ struct Device {
   DeviceType type;
 };
 
+enum class ParameterType : byte {
+  LightLevel = 0x05,
+  Occupancy = 0x20,
+  BatteryVoltage = 0x01,
+  EnergyLevel = 0x02,
+  LightLevelSolar = 0x04
+};
+
+// TODO Handle custom length parameters
+struct Parameter {
+  ParameterType type;
+  uint8_t size;
+  union {
+    uint32_t uint32;
+    uint16_t uint16;
+    uint8_t uint8;
+  } value { 0x00 };
+};
+
+
 struct CommissioningEvent {
   NimBLEAddress address;
   DeviceType type;

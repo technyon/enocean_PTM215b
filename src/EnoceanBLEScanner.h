@@ -71,6 +71,8 @@ public:
   void registerPTM215Device(const std::string bleAddress, const std::string securityKey, const uint8_t eventHandlerNodeId,
                             bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
 
+  void registerEMDCBDevice(const std::string bleAddress, const std::string securityKey, EMDCBEventHandler* handler);
+
   void unRegisterAddress(const NimBLEAddress address);
 
 private:

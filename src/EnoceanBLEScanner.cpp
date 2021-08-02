@@ -79,6 +79,7 @@ void BLEScanner::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
 
 Payload BLEScanner::getPayload(NimBLEAdvertisedDevice* advertisedDevice) {
   Payload payload;
+  memset(&payload, 0x00, sizeof(payload));
 
   // Pointer to first byte of payload to read next
   uint8_t* nextPayload = advertisedDevice->getPayload();
@@ -193,6 +194,11 @@ void BLEScanner::registerPTM215Device(const std::string bleAddress, const std::s
                                       bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1) {
   Device device = registerDevice(bleAddress, securityKey);
   ptm215Adapter.registerHandler(device, handler, buttonA0, buttonA1, buttonB0, buttonB1);
+}
+
+void BLEScanner::registerEMDCBDevice(const std::string bleAddress, const std::string securityKey, EMDCBEventHandler* handler) {
+  Device device = registerDevice(bleAddress, securityKey);
+  emdcbAdapter.registerHandler(device, handler);
 }
 
 void BLEScanner::unRegisterAddress(const NimBLEAddress address) {

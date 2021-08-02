@@ -13,7 +13,7 @@ void EMDCBEventAdapter::registerHandler(Device& device, const uint8_t nodeId) {
   if (emdcbEventHandlerMap.count(nodeId)) {
     registerHandler(device, emdcbEventHandlerMap[nodeId]);
   } else {
-    log_e("NodeId [%d] not found in ptm215EventHandlerMap", nodeId);
+    log_e("NodeId [%d] not found in emdcbEventHandlerMap", nodeId);
   }
 }
 
@@ -53,17 +53,14 @@ bool EMDCBEventAdapter::securityKeyValid(Device& device, Payload& payload) {
   memcpy(nonce, device.address.getNative(), 6);
   memcpy(&nonce[6], &payload.sequenceCounter, sizeof(payload.sequenceCounter));
 
-  printBuffer(nonce, 13, false, "Nonce\t");
 
   // construct a0 input parameter
   a0[0] = a0Flag;
   memcpy(&a0[1], nonce, sizeof(nonce));
-  printBuffer(a0, 16, false, "A0\t");
 
   // construct b0 input parameter
   b0[0] = b0Flag;
   memcpy(&b0[1], nonce, sizeof(nonce));
-  printBuffer(b0, 16, false, "B0\t");
 
   // construct b1 input parameter
   b1[0] = ((inputLength -3) >> (8 * 1)) & 0xff; // length without CRC
@@ -77,10 +74,10 @@ bool EMDCBEventAdapter::securityKeyValid(Device& device, Payload& payload) {
     memcpy(&b1[10], payload.data.raw, inputLength - 6);  
   } else {
     memcpy(&b1[10], payload.data.raw, 7);
-    memcpy(b2, payload.data.raw + 6, inputLength - 13);
+    if (inputLength > 14) {
+      memcpy(b2, payload.data.raw + 6, inputLength - 15);
+    }
   }
-  printBuffer(b1, 16, false, "B1\t");
-  printBuffer(b2, 16, false, "B2\t");
 
   unsigned char x1[16]  = {0};
   unsigned char x1a[16] = {0};
@@ -97,18 +94,15 @@ bool EMDCBEventAdapter::securityKeyValid(Device& device, Payload& payload) {
 
   // calculate X1 from B0
   mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, b0, x1);
-  printBuffer(x1, 16, false, "X1\t");
 
 
   // xor X1 B1
   for (int i = 0; i < 16; ++i) {
     x1a[i] = x1[i] ^ b1[i];
   }
-  printBuffer(x1a, 16, false, "X1a\t");
 
   // calculate X2 from X1A
   mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, x1a, x2);
-  printBuffer(x2, 16, false, "X2\t");
 
   // Calculate X2A
   for (int i = 0; i < 16; ++i) {
@@ -121,16 +115,25 @@ bool EMDCBEventAdapter::securityKeyValid(Device& device, Payload& payload) {
   // calculate S0 from A0
   mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, a0, s0);
   mbedtls_aes_free(&aes);
-  printBuffer(s0, 16, false, "S0\t");
 
   // xor X3 S0
   for (int i = 0; i < 16; ++i) {
     t0[i] = x3[i] ^ s0[i];
   }
 
-  printBuffer(payload.data.signature, 4, false, "Signature");
-  printBuffer(t0, 4, false, "T0\t");
-
+  // printBuffer(nonce, 13, false, "Nonce\t");
+  // printBuffer(a0, 16, false, "A0\t");
+  // printBuffer(b0, 16, false, "B0\t");
+  // printBuffer(b1, 16, false, "B1\t");
+  // printBuffer(b2, 16, false, "B2\t");
+  // printBuffer(x1, 16, false, "X1\t");
+  // printBuffer(x1a, 16, false, "X1a\t");
+  // printBuffer(x2, 16, false, "X2\t");
+  // printBuffer(x2a, 16, false, "X2a\t");
+  // printBuffer(x3, 16, false, "X3\t");
+  // printBuffer(s0, 16, false, "S0\t");
+  // printBuffer(payload.data.signature, 4, false, "Signature");
+  // printBuffer(t0, 4, false, "T0\t");
 
   if (memcmp(t0, payload.data.signature, 4) == 0) {
     return true;
@@ -143,13 +146,7 @@ bool EMDCBEventAdapter::securityKeyValid(Device& device, Payload& payload) {
 EMDCBEvent EMDCBEventAdapter::mapToEMDCBEvent(Device& device, Payload& payload) {
   EMDCBEvent event;
 
-  std::vector<PayloadVariable> variables = parsePayload(payload.data.raw, payload.len - 4);
-  for (auto const& var : variables) {
-    Parameter param;
-    param.type = (ParameterType) var.type;
-    param.value = var.value;
-    event.parameters.push_back(param);
-  }
+  event.parameters = parsePayloadParameters(payload.data.raw, payload.len - 11);
   event.device = &device;
 
   return event;
