@@ -121,7 +121,7 @@ void Enocean_PTM215b::onResult(NimBLEAdvertisedDevice* advertisedDevice) {
   if ((payload.type != ENOCEAN_PAYLOAD_TYPE) || (memcmp(payload.manufacturerId, ENOCEAN_PAYLOAD_MANUFACTURER, sizeof(ENOCEAN_PAYLOAD_MANUFACTURER)) != 0)) {
     return;
   }
-  printBuf(advertisedDevice->getPayload(), advertisedDevice->getPayloadLength(), false, "Enocean payload Message");
+  // printBuf(advertisedDevice->getPayload(), advertisedDevice->getPayloadLength(), false, "Enocean payload Message");
 
   SwitchType type = getTypeFromAddress(bleAddress);
   if (type == SwitchType::PTM215B) {
