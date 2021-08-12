@@ -127,6 +127,11 @@ void BLEScanner::handleDataPayload(NimBLEAddress& bleAddress, Payload& payload) 
           break;
         }
 
+        case DeviceType::STM550B: {
+          stm550Adapter.handlePayload(devices[bleAddress], payload);
+          break;
+        }
+
         default: {
           log_w("Devicetype [%d] adapter not implemented", payload.deviceType);
           break;
@@ -201,6 +206,11 @@ void BLEScanner::registerEMDCBDevice(const std::string bleAddress, const std::st
   emdcbAdapter.registerHandler(device, handler);
 }
 
+void BLEScanner::registerSTM550BDevice(const std::string bleAddress, const std::string securityKey, STM550BEventHandler* handler) {
+  Device device = registerDevice(bleAddress, securityKey);
+  stm550Adapter.registerHandler(device, handler);
+}
+
 void BLEScanner::unRegisterAddress(const NimBLEAddress address) {
   devices.erase(address);
 }
@@ -210,15 +220,15 @@ DeviceType BLEScanner::getTypeFromAddress(const NimBLEAddress& address) {
   uint8_t nativeAddress[6];
   std::reverse_copy(nativeAddressLSB, nativeAddressLSB + 6, nativeAddress);
 
-  if (memcmp(nativeAddress, STM550B_PREFIX_ADDRESS, 2) == 0) {
+  if (memcmp(nativeAddress, STM550B_PREFIX_ADDRESS, sizeof(STM550B_PREFIX_ADDRESS)) == 0) {
     return DeviceType::STM550B;
   }
 
-  if (memcmp(nativeAddress, EMDCB_PREFIX_ADDRESS, 2) == 0) {
+  if (memcmp(nativeAddress, EMDCB_PREFIX_ADDRESS, sizeof(EMDCB_PREFIX_ADDRESS)) == 0) {
     return DeviceType::EMDCB;
   }
 
-  if (memcmp(nativeAddress, PTM215B_PREFIX_ADDRESS, 2) == 0) {
+  if (memcmp(nativeAddress, PTM215B_PREFIX_ADDRESS, sizeof(PTM215B_PREFIX_ADDRESS)) == 0) {
     if ((nativeAddress[2] & 0xF0) == 1) {
       return DeviceType::PTM535BZ;
     }

@@ -44,11 +44,15 @@ struct Device {
 };
 
 enum class ParameterType : byte {
-  LightLevel = 0x05,
-  Occupancy = 0x20,
+  Temperature = 0x00,
   BatteryVoltage = 0x01,
   EnergyLevel = 0x02,
-  LightLevelSolar = 0x04
+  LightLevelSolar = 0x04,
+  LightLevel = 0x05,
+  Humidity = 0x06,
+  Acceleration = 0x0A,
+  Occupancy = 0x20,
+  MagnetContact = 0x23
 };
 
 // TODO Handle custom length parameters

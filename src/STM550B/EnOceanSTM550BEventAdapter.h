@@ -1,17 +1,17 @@
 #pragma once
 #include "../EnOceanDataTypes.h"
-#include "EnOceanEMDCBEventhandler.h"
+#include "EnOceanSTM550BEventhandler.h"
 #include "bitset"
 #include "map"
 
 
 namespace EnOcean {
 
-class EMDCBEventAdapter {
+class STM550BEventAdapter {
 public:
-  ~EMDCBEventAdapter();
+  ~STM550BEventAdapter();
 
-  void registerHandler(Device& device, EMDCBEventHandler* hander);
+  void registerHandler(Device& device, STM550BEventHandler* hander);
   void registerHandler(Device& device, const uint8_t nodeId);
   void handlePayload(Device& device, Payload& payload);
 
@@ -20,13 +20,13 @@ public:
 private:
   struct HandlerRegistration {
     NimBLEAddress address;
-    EMDCBEventHandler* handler;
+    STM550BEventHandler* handler;
   };
   std::vector<HandlerRegistration> handlers;
 
   void handleSwitchAction(const uint8_t switchStatus, NimBLEAddress& bleAddress);
-  EMDCBEvent mapToEMDCBEvent(Device& device, Payload& payload);
-  void callEventHandlers(EMDCBEvent& event);
+  STM550BEvent mapToSTM550BEvent(Device& device, Payload& payload);
+  void callEventHandlers(STM550BEvent& event);
 };
 
 } // namespace EnOcean

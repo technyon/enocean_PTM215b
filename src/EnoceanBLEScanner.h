@@ -5,6 +5,7 @@
 #include "EnOceanDataTypes.h"
 #include "PTM215/EnOceanPTM215EventAdapter.h"
 #include "EMDCB/EnOceanEMDCBEventAdapter.h"
+#include "STM550B/EnOceanSTM550BEventAdapter.h"
 #include "NimBLEDevice.h"
 #include <map>
 
@@ -72,6 +73,7 @@ public:
                             bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
 
   void registerEMDCBDevice(const std::string bleAddress, const std::string securityKey, EMDCBEventHandler* handler);
+  void registerSTM550BDevice(const std::string bleAddress, const std::string securityKey, STM550BEventHandler* handler);
 
   void unRegisterAddress(const NimBLEAddress address);
 
@@ -85,10 +87,11 @@ private:
    * If 0 then no commissioning is active
    * 
    */
-  NimBLEAddress activeCommissioningAddress{};
+  NimBLEAddress activeCommissioningAddress{}; 
 
   PTM215EventAdapter ptm215Adapter;
   EMDCBEventAdapter emdcbAdapter;
+  STM550BEventAdapter stm550Adapter;
 
   Device registerDevice(const std::string bleAddress, const std::string securityKey);
   Device registerDevice(const std::string bleAddress, const byte securityKey[16]);
