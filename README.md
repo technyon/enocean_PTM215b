@@ -5,6 +5,8 @@ This library provides an implementation for an EnOcean PTM215b selfpowered BLE s
 https://www.enocean.com/en/products/enocean_modules_24ghz_ble/ptm-215b/
 
 
+**This repository is deprecated, see https://github.com/I-Connect/EnOceanBleDevices for the curent version**
+
 ## Hardware
 Hardware supported:
 * Tested on an ESP32wroom
