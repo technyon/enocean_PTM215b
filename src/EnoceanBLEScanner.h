@@ -77,6 +77,9 @@ public:
 
   void unRegisterAddress(const NimBLEAddress address);
 
+  // public for testing
+  bool securityKeyValid(Device& device, Payload& payload);
+
 private:
   TaskHandle_t bleScanTaskHandle                       = nullptr;
   CommissioningEventhandler* commissioningEventhandler = nullptr;

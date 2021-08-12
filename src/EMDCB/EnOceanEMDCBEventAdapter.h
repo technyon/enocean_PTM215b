@@ -15,8 +15,6 @@ public:
   void registerHandler(Device& device, const uint8_t nodeId);
   void handlePayload(Device& device, Payload& payload);
 
-  bool securityKeyValid(Device& device, Payload& payload);
-
 private:
   struct HandlerRegistration {
     NimBLEAddress address;

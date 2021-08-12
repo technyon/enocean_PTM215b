@@ -25,7 +25,6 @@ public:
    *
    */
   void generateRepeatEvents();
-  bool securityKeyValid(Device& device, Payload& payload);
 
 private:
   struct HandlerRegistration {

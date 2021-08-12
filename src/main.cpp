@@ -61,6 +61,8 @@ public:
   }
 };
 
+EnOcean::BLEScanner* scanner;
+
 void testEMDCBSignature() {
   EnOcean::EMDCBEventAdapter adapter;
 
@@ -82,8 +84,8 @@ void testEMDCBSignature() {
   uint8_t signature[] {0xc8, 0xcc, 0x57, 0x12};
   memcpy(payload.data.signature, signature, 4);
 
-  EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Test Payload");
-  log_i("EMDCB Security key %s", adapter.securityKeyValid(device, payload) ? "valid" : "NOT valid");
+  // EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Test Payload");
+  log_i("EMDCB Test Security key %s", scanner->securityKeyValid(device, payload) ? "valid" : "NOT valid");
 }
 
 void testSTM550Signature() {
@@ -107,8 +109,8 @@ void testSTM550Signature() {
   uint8_t signature[] {0x0F, 0x01, 0x57, 0xD3};
   memcpy(payload.data.signature, signature, 4);
 
-  EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Test Payload");
-  log_i("STM550 Security key %s", adapter.securityKeyValid(device, payload) ? "valid" : "NOT valid");
+  // EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Test Payload");
+  log_i("STM550 Test Security key %s", scanner->securityKeyValid(device, payload) ? "valid" : "NOT valid");
 }
 
 void testPTMSignature() {
@@ -116,7 +118,7 @@ void testPTMSignature() {
   EnOcean::PTM215EventAdapter ptmAdapter;
 
   device.address = NimBLEAddress("E2:15:00:00:19:B8");
-  uint8_t key2[] = {0x3D, 0xDA, 0x31, 0xAD, 0x44, 0x76, 0x7A, 0xE3, 0xCE, 0x56, 0xDC, 0xE2, 0xB3, 0xCE, 0x2A, 0xBB};
+  uint8_t key2[] {0x3D, 0xDA, 0x31, 0xAD, 0x44, 0x76, 0x7A, 0xE3, 0xCE, 0x56, 0xDC, 0xE2, 0xB3, 0xCE, 0x2A, 0xBB};
   memcpy(device.securityKey, key2, 16);
   EnOcean::Payload payload;
   memset(&payload, 0x00, sizeof(payload));
@@ -134,10 +136,9 @@ void testPTMSignature() {
 
   EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Payload");
 
-  log_i("PTM215 Security key %s", ptmAdapter.securityKeyValid(device, payload) ? "valid" : "NOT valid");
+  log_i("PTM215 Test Security key %s", scanner->securityKeyValid(device, payload) ? "valid" : "NOT valid");
 }
 
-EnOcean::BLEScanner* scanner;
 PTMHandler* handler1;
 PTMHandler* handler2;
 EMDCBHandler* emdcbHandler;
@@ -159,17 +160,18 @@ void setup() {
 
   log_d("Adding devices");
   // register handler for A0 and B0 buttons using pointer to handler
-  // scanner->registerPTM215Device(PTM_BLE_ADDRESS, PTM_SECURITY_KEY, handler1, true, false, true, false);
+  scanner->registerPTM215Device(PTM_BLE_ADDRESS, PTM_SECURITY_KEY, handler1, true, false, true, false);
   // register handler for A1, B0 and B1 buttons, using nodeId of handler
-  // scanner->registerPTM215Device(PTM_BLE_ADDRESS, PTM_SECURITY_KEY, 2, false, true, true, true);
+  scanner->registerPTM215Device(PTM_BLE_ADDRESS, PTM_SECURITY_KEY, 2, false, true, true, true);
 
-  // scanner->registerEMDCBDevice(EMDCB_BLE_ADDRESS, EMDCB_SECURITY_KEY, emdcbHandler);
+  scanner->registerEMDCBDevice(EMDCB_BLE_ADDRESS, EMDCB_SECURITY_KEY, emdcbHandler);
 
   scanner->registerSTM550BDevice(STM550_BLE_ADDRESS, STM550_SECURITY_KEY, stmHandler);
   log_i("Initialization done");
   log_i("===========================================");
 
-  // testEMDCBSignature();
+  testPTMSignature();
+  testEMDCBSignature();
   testSTM550Signature();
 }
 
