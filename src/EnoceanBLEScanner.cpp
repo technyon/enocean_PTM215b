@@ -228,7 +228,6 @@ void BLEScanner::handleDataPayload(NimBLEAddress& bleAddress, Payload& payload) 
       device.lastSequenceCounter = payload.sequenceCounter;
       switch (payload.deviceType) {
         case DeviceType::PTM215B: {
-          // Note that devices address is stored for repeat events, so don't use local var device
           ptm215Adapter.handlePayload(device, payload);
           break;
         }

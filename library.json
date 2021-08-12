@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "EnOcean_PTM215b",
   "description": "Implementation of EnOcean Selfpowered BLE devices",
   "keywords": "enocean PTM215b PTM535BZ EMDCB STM550ble esp32 BLE",

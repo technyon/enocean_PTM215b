@@ -34,11 +34,11 @@ public:
     log_i("Handling EMDCB Event by node %d", getId());
     log_i("DeviceAddress: %s", event.device->address.toString().c_str());
     log_i("Parameters:");
-    log_i("\tType \tSize \tValue");
+    log_i("\tType \tSize Value");
     log_i("-----------------------------");
     for (auto const& parameter : event.parameters) {
       char b[5];
-      log_i("\t0x%02x \t%d \t%s", parameter.type, parameter.size, EnOcean::printBuffer((byte*)&parameter.value, parameter.size, false, "", b));  
+      log_i("\t0x%02x \t   %d %s", parameter.type, parameter.size, EnOcean::printBuffer((byte*)&parameter.value, parameter.size, false, "", b));  
     }
   }
 };
@@ -52,11 +52,11 @@ public:
     log_i("Handling STM550B Event by node %d", getId());
     log_i("DeviceAddress: %s", event.device->address.toString().c_str());
     log_i("Parameters:");
-    log_i("\tType \tSize \tValue");
+    log_i("\tType \tSize Value");
     log_i("-----------------------------");
     for (auto const& parameter : event.parameters) {
       char b[5];
-      log_i("\t0x%02x \t%d \t%s", parameter.type, parameter.size, EnOcean::printBuffer((byte*)&parameter.value, parameter.size, false, "", b));  
+      log_i("\t0x%02x \t   %d %s", parameter.type, parameter.size, EnOcean::printBuffer((byte*)&parameter.value, parameter.size, false, "", b));  
     }
   }
 };
@@ -134,7 +134,7 @@ void testPTMSignature() {
   uint8_t signature2[] = {0xB2, 0xFA, 0x88, 0xFF};
   memcpy(payload.data.signature, signature2, 4);
 
-  EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Payload");
+  // EnOcean::printBuffer((byte*)&payload, sizeof(payload), false, "Payload");
 
   log_i("PTM215 Test Security key %s", scanner->securityKeyValid(device, payload) ? "valid" : "NOT valid");
 }

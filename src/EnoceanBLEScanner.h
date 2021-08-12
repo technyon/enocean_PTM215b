@@ -17,11 +17,11 @@ namespace EnOcean {
  * EnOcean devices
  *
  * The class works by starting a background taks which will scan for BLE
- * advertising events By deriving from BLEAdvertisedDeviceCallBack the class can
- * be used in a ble scan task which will call EnOcean_PTM251b.onResult() method
- * when a message is received
+ * advertising events. On receipt of an event the onResult() method will be called
+ * which wil validate the message and dispatch it to an eventAdapater based on the 
+ * device type where the message came from
  *
- * EnOcean devices need to be registered to this class using registerDevice methods,
+ * EnOcean devices need to be registered to this class using registerXXXDevice() methods,
  * which links the BLE address to a handler which will be called on
  * reception of an event on that BLE address
  *
@@ -60,19 +60,34 @@ public:
   }
 
   /**
-   * @brief Register an EnOcean PTM215 device
+   * @brief Register an EnOcean PTM215 device (Switches)
    *
    * @param bleAddress BLE address of switch being handled
    * @param securityKey Security key retrieved from QR code, NFC or commissioning data
    * @param handler PayloadHandler that will be called on receipt of an event on the bleAddress
-   * @param buttonXX booleans indicating which of the button A0, A1, B0 and B1 will be handled by this handler
+   * @param buttonXX booleans indicating which of the buttons A0, A1, B0 and B1 will be handled by this handler
    */
   void registerPTM215Device(const std::string bleAddress, const std::string securityKey, PTM215EventHandler* handler,
                             bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
   void registerPTM215Device(const std::string bleAddress, const std::string securityKey, const uint8_t eventHandlerNodeId,
                             bool buttonA0, bool buttonA1, bool buttonB0, bool buttonB1);
 
+  /**
+   * @brief Register an EnOcean EMDCB device (motion detector)
+   *
+   * @param bleAddress BLE address of device being handled
+   * @param securityKey Security key retrieved from QR code, NFC or commissioning data
+   * @param handler PayloadHandler that will be called on receipt of an event on the bleAddress
+   */ 
   void registerEMDCBDevice(const std::string bleAddress, const std::string securityKey, EMDCBEventHandler* handler);
+
+  /**
+   * @brief Register an EnOcean STM550B device (multi sensor)
+   *
+   * @param bleAddress BLE address of device being handled
+   * @param securityKey Security key retrieved from QR code, NFC or commissioning data
+   * @param handler PayloadHandler that will be called on receipt of an event on the bleAddress
+   */ 
   void registerSTM550BDevice(const std::string bleAddress, const std::string securityKey, STM550BEventHandler* handler);
 
   void unRegisterAddress(const NimBLEAddress address);
@@ -88,7 +103,6 @@ private:
    * @brief Address of currently active commissioning event
    * 
    * If 0 then no commissioning is active
-   * 
    */
   NimBLEAddress activeCommissioningAddress{}; 
 
@@ -127,8 +141,8 @@ private:
   Payload getPayload(NimBLEAdvertisedDevice* advertisedDevice);
 
   /**
-   * @brief Dedupes messages, Checks sequence counter to prevent replay attack
-   * and calls payloadHandler() of the PayloadHandler registered on the bleAddress, if any
+   * @brief Dedupes messages, Checks sequence counter and security key
+   * and calls handlePayload() of the EventAdapter of the device type
    *
    * @param bleAddress 
    * @param payload
